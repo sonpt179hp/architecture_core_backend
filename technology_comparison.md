@@ -131,8 +131,8 @@ Phần dưới đây tổng hợp lại theo cách dễ đọc hơn: mỗi hạn
 
 | Rủi ro | Mô tả | Cách giảm thiểu |
 |---|---|---|
-| **Learning Curve** | Team cần học Clean Arch, DDD, CQRS, K8s cùng lúc | Chia giai đoạn học. Bắt đầu với 1 service mẫu đầy đủ trước khi replicate |
-| **Eventual Consistency** | Dữ liệu giữa services có độ trễ đồng bộ ngắn | Thiết kế UI chịu được trạng thái "đang xử lý". Document rõ SLA đồng bộ |
-| **Operational Complexity** | K8s phức tạp hơn IIS nhiều lần | Cần ít nhất 1 DevOps engineer chuyên trách. Cân nhắc managed K8s (EKS/GKE/AKS) |
-| **Data Migration** | Di chuyển dữ liệu từ SQL Server sang PostgreSQL | Chạy song song 2 hệ thống trong giai đoạn chuyển tiếp. Test kỹ mapping schema |
-| **Debug khó hơn** | Lỗi phân tán qua nhiều service khó trace | Bắt buộc tích hợp OpenTelemetry + Distributed Tracing từ ngày đầu |
+| **Data Migration** | Chuyển SQL Server → PostgreSQL, đặc biệt phần cây tổ chức sang ltree dễ sai | Chạy song song 2 hệ thống trong giai đoạn chuyển tiếp. Pilot với 1-2 đơn vị nhỏ trước, rollback được |
+| **Eventual Consistency** | Dữ liệu giữa services có độ trễ đồng bộ ngắn — dễ gây hiển thị sai trên UI | Thiết kế UI chịu được trạng thái trung gian. Document rõ SLA đồng bộ cho từng luồng nghiệp vụ |
+| **Multi-Tenant Data Isolation** | Quên filter `TenantId` trong 1 query là có thể lộ dữ liệu đơn vị khác | Bắt buộc Global Query Filter trong EF Core. Architecture Test tự động kiểm tra toàn bộ entity |
+| **Debug phân tán** | Lỗi trải qua nhiều service, queue, background worker — rất khó trace | Tích hợp OpenTelemetry + CorrelationId + centralized logging từ ngày đầu, không để sau |
+| **Operational Complexity** | Docker Swarm + Broker + PostgreSQL Cluster phức tạp hơn IIS truyền thống | Cần DevOps chuyên trách. Xây dựng runbook cho sự cố. Monitoring và alerting bắt buộc từ sớm |
