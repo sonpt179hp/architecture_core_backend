@@ -27,6 +27,11 @@ Bộ luật nền tĩnh cho AI, cấu trúc **DO / DON'T / Ví dụ C#**. Tracea
 | `06-observability.md` | Serilog structured logging, OpenTelemetry, health checks `/live` và `/ready`, audit log tách biệt |
 | `07-testing.md` | Unit test Domain, integration test PostgreSQL thật (Testcontainers), Architecture Test, Contract Test |
 | `08-efcore.md` | AsNoTracking cho read, migration theo bounded context, optimistic concurrency, transaction boundary |
+| `09-error-handling.md` | Exception hierarchy, Global Exception Handler, ProblemDetails, mapping exception → HTTP status |
+| `10-dependency-injection.md` | IServiceCollection extensions, service lifetimes, module registration, container validation |
+| `11-configuration.md` | Options Pattern, appsettings structure, secrets strategy, startup validation, feature flags |
+| `12-caching.md` | Redis distributed cache, cache-aside pattern, tenant-aware cache keys, invalidation, TTL |
+| `13-background-jobs.md` | Outbox/Inbox pattern, BackgroundService polling, Hangfire/Quartz scheduled jobs |
 
 ---
 
@@ -40,3 +45,8 @@ Workflow thực thi cho AI scaffold code theo đúng convention. Mỗi skill có
 | `generate-query` | `/generate-query` | Scaffold Query + Dapper Handler + DTO + GET action (read use case) |
 | `generate-domain-entity` | `/generate-domain-entity` | Scaffold Aggregate Root + Value Objects + Domain Events + EF Config + Repository |
 | `add-event-handler` | `/add-event-handler` | Scaffold MassTransit Consumer + Idempotency + ConsumerDefinition + DLQ |
+| `setup-error-handling` | `/setup-error-handling` | Scaffold exception hierarchy + GlobalExceptionHandler + ProblemDetails mapping |
+| `setup-dependency-injection` | `/setup-dependency-injection` | Scaffold DI extension methods + Program.cs structure + container validation |
+| `setup-configuration` | `/setup-configuration` | Scaffold Options classes + appsettings structure + validation + secrets strategy |
+| `setup-caching` | `/setup-caching` | Scaffold Redis connection + cached repository decorator + cache key helpers |
+| `setup-background-job` | `/setup-background-job` | Scaffold Outbox table + processor BackgroundService + Hangfire setup |
