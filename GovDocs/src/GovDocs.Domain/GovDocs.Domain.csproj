@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>GovDocs.Domain</RootNamespace>
+  </PropertyGroup>
+
+</Project>
