@@ -31,7 +31,6 @@
    var options = new DistributedCacheEntryOptions
    {
        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-       SlidingExpiration               = TimeSpan.FromMinutes(2),
    };
    ```
 
@@ -40,13 +39,22 @@
    await _cache.RemoveAsync(CacheKeys.Document(tenantId, documentId), ct);
    ```
 
-6. **Dùng Decorator Pattern** để bọc repository — không nhét cache logic vào handler:
+6. **Inject cache service vào Handler** cho cache-aside pattern:
    ```csharp
-   services.AddScoped<IDocumentRepository, EfDocumentRepository>();
-   services.Decorate<IDocumentRepository, CachedDocumentRepository>();
+   // Handler gets ICacheService, reads cache first, invalidates on write
    ```
 
 7. **Serialize/deserialize dùng `System.Text.Json`** — nhỏ, nhanh, không cần thư viện ngoài.
+
+8. **Graceful fallback khi Redis down** — log warning, trả data từ DB:
+   ```csharp
+   try { cached = await _cache.GetStringAsync(key, ct); }
+   catch (RedisException ex)
+   {
+       _logger.LogWarning(ex, "Redis unavailable, falling back to database");
+       return await _db.Documents.FindAsync(id);
+   }
+   ```
 
 ## DON'T
 
@@ -62,15 +70,7 @@
 
 3. **KHÔNG** cache mãi mãi (TTL = null) cho data thay đổi thường xuyên.
 
-4. **KHÔNG** để cache miss block toàn bộ request nếu Redis down — implement fallback:
-   ```csharp
-   try { cached = await _cache.GetStringAsync(key, ct); }
-   catch (RedisException ex)
-   {
-       _logger.LogWarning(ex, "Redis unavailable, falling back to database");
-       return await _inner.GetByIdAsync(id, ct); // fallback
-   }
-   ```
+4. **KHÔNG** để cache miss block toàn bộ request nếu Redis down — implement fallback.
 
 5. **KHÔNG** cache kết quả query phân trang động (vì filter/page thay đổi liên tục) — chỉ cache entity đơn lẻ theo ID.
 
@@ -89,6 +89,15 @@
 ## Ví dụ minh họa
 
 ```csharp
+// ── Infrastructure/Caching/ICacheService.cs
+public interface ICacheService
+{
+    Task<T?> GetAsync<T>(string key, CancellationToken ct = default);
+    Task SetAsync<T>(string key, T value, TimeSpan? expiry = null, CancellationToken ct = default);
+    Task RemoveAsync(string key, CancellationToken ct = default);
+    Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> factory, TimeSpan? expiry = null, CancellationToken ct = default);
+}
+
 // ── Infrastructure/Caching/CacheKeys.cs
 public static class CacheKeys
 {
@@ -102,54 +111,44 @@ public static class CacheKeys
         $"tenant:{tenantId}:user:{userId}:permissions";
 }
 
-// ── Infrastructure/Caching/CachedDocumentRepository.cs
-public class CachedDocumentRepository : IDocumentRepository
+// ── Cache-aside in Query Handler
+internal sealed class GetDocumentByIdQueryHandler(
+    IApplicationDbContext dbContext,
+    ICacheService cache) : IQueryHandler<GetDocumentByIdQuery, Result<DocumentResponse>>
 {
-    private static readonly TimeSpan Ttl = TimeSpan.FromMinutes(10);
-
-    public async Task<Document?> GetByIdAsync(Guid id, CancellationToken ct)
+    public async ValueTask<Result<DocumentResponse>> Handle(
+        GetDocumentByIdQuery query, CancellationToken ct)
     {
-        var key = CacheKeys.Document(_tenant.TenantId, id);
+        var key = CacheKeys.Document(_tenant.TenantId, query.DocumentId);
 
-        try
-        {
-            var cached = await _cache.GetStringAsync(key, ct);
-            if (cached is not null)
-                return JsonSerializer.Deserialize<Document>(cached);
-        }
-        catch (RedisException ex)
-        {
-            _logger.LogWarning(ex, "Redis unavailable for key {CacheKey}", key);
-        }
-
-        var entity = await _inner.GetByIdAsync(id, ct);
-
-        if (entity is not null)
-        {
-            try
+        // Step 1: Try cache
+        var cached = await cache.GetOrCreateAsync(
+            key,
+            async () =>
             {
-                await _cache.SetStringAsync(key, JsonSerializer.Serialize(entity),
-                    new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = Ttl }, ct);
-            }
-            catch (RedisException ex)
-            {
-                _logger.LogWarning(ex, "Failed to cache document {DocumentId}", id);
-            }
-        }
+                var doc = await dbContext.Documents
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(d => d.Id == new DocumentId(query.DocumentId), ct);
+                return doc is null ? null : doc.ToResponse();
+            },
+            TimeSpan.FromMinutes(10), ct);
 
-        return entity;
-    }
+        if (cached is null)
+            return DocumentErrors.NotFound;
 
-    public async Task UpdateAsync(Document entity, CancellationToken ct)
-    {
-        await _inner.UpdateAsync(entity, ct);
-        // Invalidate sau khi update
-        await _cache.RemoveAsync(CacheKeys.Document(_tenant.TenantId, entity.Id), ct);
+        return cached;
     }
 }
 
-// ── Infrastructure/DependencyInjection.cs
-services.AddScoped<IDocumentRepository, EfDocumentRepository>();
-services.Decorate<IDocumentRepository, CachedDocumentRepository>();
-// (Scrutor package cho Decorate)
+// ── Cache invalidation in Command Handler
+internal sealed class UpdateDocumentCommandHandler(IApplicationDbContext dbContext, ICacheService cache)
+    : ICommandHandler<UpdateDocumentCommand, Result>
+{
+    public async ValueTask<Result> Handle(UpdateDocumentCommand cmd, CancellationToken ct)
+    {
+        // ... update logic ...
+        await cache.RemoveAsync(CacheKeys.Document(_tenant.TenantId, cmd.Id), ct);
+        return Result.Success();
+    }
+}
 ```

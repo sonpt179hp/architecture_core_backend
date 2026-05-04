@@ -4,30 +4,58 @@
 
 ---
 
+## Mediator Library
+
+Dự án dùng **Mediator (MediatR từ Arch.Ext)**, KHÔNG phải MediatR (Jimmy Bogard's).
+
+| | Mediator (Arch.Ext) | MediatR |
+|---|---|---|
+| Packages | `Arch.Extensions.MediatR` | `MediatR` |
+| Interface | `ICommand`, `ICommand<T>` | `IRequest`, `IRequest<T>` |
+| Handler | `ICommandHandler<,>`, `IQueryHandler<,>` | `IRequestHandler<,>` |
+| Sender | `ISender` | `ISender` |
+
+---
+
+## CQRS Decision Matrix
+
+| Thao tác | Cách thực hiện |
+|---|---|
+| **Tạo mới (Create)** | EF Core |
+| **Cập nhật (Update)** | EF Core |
+| **Xóa (Delete)** | EF Core |
+| **Đọc đơn giản** (1 entity, theo ID) | EF Core `AsNoTracking()` |
+| **Đọc phức tạp** (nhiều bảng, JOIN, filter phức tạp) | Dapper + **Stored Procedure** |
+
+---
+
 ## DO
 
 1. **Mỗi API endpoint** sinh đúng bộ 3: `{UseCase}Command` / `{UseCase}Query` + Handler + Validator.
    Đặt trong `Features/{UseCase}/`: `Command.cs`, `CommandHandler.cs`, `CommandValidator.cs`.
 
-2. **Write path** dùng EF Core với Change Tracking (không `AsNoTracking`).
+2. **Write path** dùng **EF Core** với Change Tracking (không `AsNoTracking`).
 
-3. **Read path** dùng Dapper + SQL thuần hoặc Database View, trả thẳng DTO — không đi qua Domain entity.
+3. **Read path đơn giản** dùng EF Core `AsNoTracking()` — không cần Dapper cho query đơn bảng.
 
-4. **Đăng ký** `ValidationBehavior<TRequest, TResponse>` và `LoggingBehavior<TRequest, TResponse>` vào MediatR Pipeline.
+4. **Read path phức tạp** dùng **Dapper + Stored Procedure**, trả thẳng DTO — không đi qua Domain entity.
 
-5. **Command handler pattern:**
+5. **Đăng ký** `ValidationBehavior<TRequest, TResponse>` và `LoggingBehavior<TRequest, TResponse>` vào Mediator Pipeline.
+
+6. **Command handler pattern:**
    ```
    validate (qua pipeline) → load aggregate → gọi domain method → persist → raise domain events
    ```
 
-6. **Query handler pattern:**
+7. **Query handler pattern:**
    ```
-   lấy IDbConnection → chạy SQL/Dapper → map DTO → trả về
+   Read đơn giản: EF Core AsNoTracking() → map ToResponse()
+   Read phức tạp: IDbConnection → gọi Stored Procedure → map DTO → trả về
    ```
 
-7. Đặt `CancellationToken` làm tham số cuối cùng trong mọi Handler.
+8. Đặt `CancellationToken` làm tham số cuối cùng trong mọi Handler.
 
-8. **Phân trang chuẩn** cho list query:
+9. **Phân trang chuẩn** cho list query:
    ```csharp
    public record PagedResult<T>(IReadOnlyList<T> Items, int TotalCount, int Page, int PageSize);
    ```
@@ -36,21 +64,37 @@
 
 1. **KHÔNG** để Query handler gọi vào Repository của Domain để lấy data rồi map thủ công sang DTO.
 
-2. **KHÔNG** để Command handler viết SQL thô (Dapper) để thực hiện ghi dữ liệu.
+2. **KHÔNG** để Command handler viết SQL thô (Dapper) để thực hiện ghi dữ liệu. Luôn dùng EF Core.
 
-3. **KHÔNG** dùng EF Core `Include()` chain dài trong Query handler — dùng SQL thuần hoặc View thay thế.
+3. **KHÔNG** dùng EF Core `Include()` chain dài trong Query handler — chuyển sang Dapper + Stored Procedure.
 
-4. **KHÔNG** đặt business validation (ví dụ: "văn bản đã phát hành không được sửa") trong FluentValidation Validator.
+4. **KHÔNG** viết SQL thuần trong code C#. Dùng Stored Procedure cho read path phức tạp.
+
+5. **KHÔNG** đặt business validation (ví dụ: "văn bản đã phát hành không được sửa") trong FluentValidation Validator.
    Validator chỉ validate format/required của input DTO. Business rule thuộc về Domain entity.
 
-5. **KHÔNG** chia sẻ chung 1 Handler giữa 2 use case khác nhau dù input tương tự.
+6. **KHÔNG** chia sẻ chung 1 Handler giữa 2 use case khác nhau dù input tương tự.
+
+7. **KHÔNG** dùng MediatR (Jimmy Bogard) — dùng Mediator (Arch.Ext).
 
 ## Ví dụ minh họa
 
 ```csharp
-// ── Command ── Application layer
-public record CreateDocumentCommand(string Title, string Content, Guid IssuingOfficeId)
-    : IRequest<Guid>;
+// ── Application/Abstractions/Messaging/ICommand.cs
+namespace {Namespace}.Application.Abstractions.Messaging;
+
+public interface ICommand;
+public interface ICommand<out TResponse>;
+public interface IQuery<TResponse>;
+```
+
+```csharp
+// ── Command ── Application layer (Write: EF Core)
+using {Namespace}.Application.Abstractions.Messaging;
+using {Namespace}.Domain.Common;
+
+public sealed record CreateDocumentCommand(string Title, string Content, Guid IssuingOfficeId)
+    : ICommand<Result<Guid>>;
 
 public class CreateDocumentCommandValidator : AbstractValidator<CreateDocumentCommand>
 {
@@ -62,41 +106,83 @@ public class CreateDocumentCommandValidator : AbstractValidator<CreateDocumentCo
     }
 }
 
-public class CreateDocumentCommandHandler : IRequestHandler<CreateDocumentCommand, Guid>
+internal sealed class CreateDocumentCommandHandler(
+    IApplicationDbContext dbContext,
+    ITenantContext tenantContext)
+    : ICommandHandler<CreateDocumentCommand, Guid>
 {
-    public async Task<Guid> Handle(CreateDocumentCommand cmd, CancellationToken ct)
+    public async ValueTask<Result<Guid>> Handle(
+        CreateDocumentCommand command,
+        CancellationToken cancellationToken)
     {
-        var doc = Document.Create(DocumentTitle.Create(cmd.Title), _tenantContext.TenantId);
-        await _repo.AddAsync(doc, ct);
-        await _uow.SaveChangesAsync(ct);
-        return doc.Id;
+        var createResult = Document.Create(
+            DocumentTitle.Create(command.Title),
+            tenantContext.TenantId);
+        if (createResult.IsFailure)
+            return Result<Guid>.Failure(createResult.Error);
+
+        var doc = createResult.Value;
+        dbContext.Documents.Add(doc);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Result<Guid>.Success(doc.Id);
     }
 }
+```
 
-// ── Query ── Application layer
-public record GetDocumentListQuery(int Page, int PageSize, string? Keyword)
-    : IRequest<PagedResult<DocumentSummaryDto>>;
+```csharp
+// ── Query ── Application layer (Read phức tạp: Dapper + Stored Procedure)
+using {Namespace}.Application.Abstractions.Messaging;
+using {Namespace}.Domain.Common;
+using Dapper;
 
-public class GetDocumentListQueryHandler
-    : IRequestHandler<GetDocumentListQuery, PagedResult<DocumentSummaryDto>>
+public sealed record GetDocumentListQuery(int Page, int PageSize, string? Keyword)
+    : IQuery<Result<PagedResult<DocumentSummaryDto>>>;
+
+internal sealed class GetDocumentListQueryHandler(
+    IDbConnection dbConnection,
+    ITenantContext tenantContext)
+    : IQueryHandler<GetDocumentListQuery, PagedResult<DocumentSummaryDto>>
 {
-    public async Task<PagedResult<DocumentSummaryDto>> Handle(
+    public async ValueTask<Result<PagedResult<DocumentSummaryDto>>> Handle(
         GetDocumentListQuery q, CancellationToken ct)
     {
-        const string sql = @"
-            SELECT d.id, d.title, d.issued_at, o.name AS issuing_office
-            FROM documents d
-            JOIN offices o ON o.id = d.issuing_office_id
-            WHERE d.tenant_id = @TenantId
-              AND (@Keyword IS NULL OR d.title ILIKE '%' || @Keyword || '%')
-            ORDER BY d.issued_at DESC
-            LIMIT @PageSize OFFSET @Offset";
-
-        var rows = await _db.QueryAsync<DocumentSummaryDto>(sql, new {
-            _tenant.TenantId, q.Keyword, q.PageSize,
+        var parameters = new
+        {
+            tenantContext.TenantId,
+            q.Keyword,
+            q.PageSize,
             Offset = (q.Page - 1) * q.PageSize
-        });
-        // ...
+        };
+
+        using var multi = await dbConnection.QueryMultipleAsync(
+            "sp_Documents_List",
+            parameters,
+            commandType: CommandType.StoredProcedure);
+
+        var rows = (await multi.ReadAsync<DocumentSummaryDto>()).ToList();
+        var totalCount = await multi.ReadSingleAsync<int>();
+
+        return new PagedResult<DocumentSummaryDto>(rows, totalCount, q.Page, q.PageSize);
+    }
+}
+```
+
+```csharp
+// ── Query ── Application layer (Read đơn giản: EF Core)
+internal sealed class GetDocumentByIdQueryHandler(IApplicationDbContext dbContext)
+    : IQueryHandler<GetDocumentByIdQuery, Result<GetDocumentByIdResponse>>
+{
+    public async ValueTask<Result<GetDocumentByIdResponse>> Handle(
+        GetDocumentByIdQuery query, CancellationToken ct)
+    {
+        var doc = await dbContext.Documents
+            .AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Id == new DocumentId(query.Id), ct);
+
+        if (doc is null)
+            return DocumentErrors.NotFound;
+
+        return doc.ToResponse();
     }
 }
 ```

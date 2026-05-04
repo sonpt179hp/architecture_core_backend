@@ -15,7 +15,7 @@
 2. **Trả `ProblemDetails`** (RFC 7807) cho mọi response lỗi:
    ```json
    {
-     "type": "https://tools.ietf.org/html/rfc4918#section-11.2",
+     "type": "https://httpstatuses.com/422",
      "title": "Validation Failed",
      "status": 422,
      "errors": { "Title": ["Title is required"] },
@@ -25,7 +25,8 @@
 
 3. **Chuẩn hóa pagination request:**
    ```csharp
-   public record PaginationQuery(int Page = 1, int PageSize = 20);
+   public sealed record GetDocumentListQuery(int Page = 1, int PageSize = 20, string? Keyword = null)
+       : IQuery<Result<PagedResult<DocumentSummaryDto>>>;
    ```
 
    **Chuẩn hóa pagination response:**
@@ -43,6 +44,23 @@
 6. Trả `201 Created` với `Location` header cho POST tạo resource mới.
 
 7. **Đặt API version trong URL** (`/api/v1/`) — không dùng query param hay header versioning.
+
+8. **Map Error sang HTTP status:**
+   | ErrorType | HTTP Status | Mô tả |
+   |---|---|---|
+   | `NotFound` | 404 | Resource không tồn tại |
+   | `Validation` | 422 | Business validation thất bại (Result pattern) |
+   | `Conflict` | 409 | Concurrency conflict hoặc trùng dữ liệu |
+   | `Unauthorized` | 401 | Chưa xác thực (chưa login) |
+   | `Forbidden` | 403 | Không có quyền truy cập tài nguyên |
+   | `Failure` | 500 | Lỗi hệ thống không xử lý được |
+   | `ServiceUnavailable` | 503 | Dependency (DB, Redis, broker) không available |
+
+9. **FluentValidation trả 400 Bad Request** cho input validation (sai format, thiếu required):
+   | Loại validation | HTTP Status |
+   |---|---|
+   | Input validation (FluentValidation) | 400 |
+   | Business validation (Result pattern) | 422 |
 
 ## DON'T
 
@@ -77,11 +95,11 @@ public async Task<IActionResult> Create(
     [FromHeader(Name = "Idempotency-Key")] Guid? idempotencyKey,
     CancellationToken ct)
 {
-    var id = await _mediator.Send(command, ct);
-    return CreatedAtAction(
-        nameof(GetById),
-        new { id, version = "1" },
-        new { id });
+    var result = await Sender.Send(command, ct);
+
+    return result.Match(
+        id => CreatedAtAction(nameof(GetById), new { id = id.Value, version = "1" }, null),
+        error => error.ToActionResult());
 }
 
 // ── Pagination validator
@@ -89,7 +107,7 @@ public class GetDocumentListQueryValidator : AbstractValidator<GetDocumentListQu
 {
     public GetDocumentListQueryValidator()
     {
-        RuleFor(x => x.Page).GreaterThanOrEqualTo(1).DefaultSeverity = Severity.Warning;
+        RuleFor(x => x.Page).GreaterThanOrEqualTo(1);
         RuleFor(x => x.PageSize).InclusiveBetween(1, 100);
     }
 }

@@ -4,168 +4,311 @@
 
 ---
 
-## Exception Hierarchy
+## Error Strategy: Result Pattern First
+
+Dự án dùng **Result Pattern** làm primary error handling mechanism. Exception chỉ dùng cho
+unhandled/system errors.
 
 ```
-Exception
-└── AppException (base, abstract)
-    ├── DomainException              ← Business rule violations (422)
-    │   ├── DocumentAlreadyPublishedException
-    │   └── InsufficientPermissionException
-    ├── NotFoundException            ← Resource not found (404)
-    ├── ConflictException            ← Concurrency / duplicate (409)
-    └── InfrastructureException      ← External dependency failure (502/503)
+✅ Command Handler → return Result<T>.Failure(error)
+✅ Query Handler → return Error.NotFound(...)
+✅ Validator (FluentValidation) → ValidationBehavior trả Error.Validation(...)
+✅ Domain Entity Factory → return Result<T>.Failure(domainError)
+❌ KHÔNG dùng exception cho business rule violations
+```
+
+**GlobalExceptionHandler chỉ catch:**
+- Unhandled exceptions (bugs, null refs)
+- External service failures (DB down, Redis down)
+- KHÔNG catch Result failures — chúng được handle ở Controller qua `result.ToActionResult()`
+
+---
+
+## Result Pattern Types
+
+```
+Domain/Common/
+├── Result.cs          # Base class: IsSuccess, IsFailure, Error
+├── ResultT.cs         # Result<T>: Value property
+├── Error.cs           # Error record struct: Code, Description, Type
+└── ErrorType.cs      # enum: Failure | Validation | NotFound | Conflict | Unauthorized
 ```
 
 ---
 
 ## DO
 
-1. **Định nghĩa exception hierarchy** rõ ràng theo layer:
-   - `DomainException` — vi phạm business rule, đặt trong `Domain/Exceptions/`
-   - `NotFoundException` — resource không tồn tại, đặt trong `Application/Exceptions/`
-   - `ConflictException` — concurrency hoặc duplicate, đặt trong `Application/Exceptions/`
-   - `InfrastructureException` — lỗi external (DB, broker, HTTP), đặt trong `Infrastructure/Exceptions/`
-
-2. **Đăng ký Global Exception Middleware** trước tất cả middleware khác:
+1. **Dùng Result Pattern** cho mọi handler:
    ```csharp
-   app.UseExceptionHandler(); // .NET 8 built-in IExceptionHandler
-   // hoặc
-   app.UseMiddleware<GlobalExceptionMiddleware>();
-   ```
-
-3. **Map từng exception type sang HTTP status code nhất quán:**
-   | Exception | HTTP Status |
-   |---|---|
-   | `ValidationException` (FluentValidation) | 422 |
-   | `DomainException` | 422 |
-   | `NotFoundException` | 404 |
-   | `ConflictException` / `DbUpdateConcurrencyException` | 409 |
-   | `UnauthorizedAccessException` | 403 |
-   | `InfrastructureException` | 502 |
-   | `Exception` (unhandled) | 500 |
-
-4. **Log exception với đầy đủ context** tại middleware level:
-   ```csharp
-   _logger.LogError(ex, "Unhandled exception for {Method} {Path} CorrelationId={CorrelationId}",
-       context.Request.Method, context.Request.Path, context.Items["TraceId"]);
-   ```
-
-5. **Translate exception ở layer boundary** — Infrastructure exception không được bubble up thô vào Application:
-   ```csharp
-   catch (PostgresException ex) when (ex.SqlState == "23505")
+   public async ValueTask<Result> Handle(DeleteDocumentCommand cmd, CancellationToken ct)
    {
-       throw new ConflictException("Record already exists", ex);
+       if (result.IsFailure)
+           return Result.Failure(DocumentErrors.NotFound);
+       // ...
+       return Result.Success();
    }
    ```
 
-6. **Dùng typed, named exceptions** — mỗi business rule violation có exception riêng để dễ xử lý có chủ đích.
+2. **Định nghĩa predefined errors** trong Domain:
+   ```csharp
+   public static class DocumentErrors
+   {
+       public static readonly Error NotFound = Error.NotFound(
+           "Document.NotFound",
+           "The document with the specified identifier was not found.");
+
+       public static readonly Error AlreadyPublished = Error.Validation(
+           "Document.AlreadyPublished",
+           "The document has already been published and cannot be modified.");
+
+       public static readonly Error ConcurrencyConflict = Error.Conflict(
+           "Document.ConcurrencyConflict",
+           "The document was modified by another user. Please refresh and retry.");
+   }
+   ```
+
+3. **Map Error.Type sang HTTP status** trong `ResultExtensions`:
+   | ErrorType | HTTP Status | Mô tả |
+   |---|---|---|
+   | `NotFound` | 404 | Resource không tồn tại |
+   | `Validation` | 422 | Business validation thất bại (Result pattern) |
+   | `Conflict` | 409 | Concurrency conflict hoặc trùng dữ liệu |
+   | `Unauthorized` | 401 | Chưa xác thực |
+   | `Forbidden` | 403 | Không có quyền truy cập tài nguyên |
+   | `Failure` | 500 | Lỗi hệ thống không xử lý được |
+   | `ServiceUnavailable` | 503 | Dependency không available |
+
+4. **GlobalExceptionHandler** chỉ catch thật sự exceptions:
+   ```csharp
+   // Chỉ log và trả ProblemDetails cho unhandled exceptions
+   public async ValueTask<bool> TryHandleAsync(HttpContext ctx, Exception ex, CancellationToken ct)
+   {
+       _logger.LogError(ex, "Unhandled exception for {Method} {Path}", ctx.Request.Method, ctx.Request.Path);
+       // Trả 500 Internal Server Error
+   }
+   ```
+
+5. **Validation failures (FluentValidation)** trả 400 Bad Request cho input validation.
+   **Business validation (Result pattern)** trả 422 Unprocessable Entity.
 
 ## DON'T
 
-1. **KHÔNG** throw `Exception` hay `ApplicationException` generic:
+1. **KHÔNG** dùng exception cho business rule violations:
+   ```csharp
+   // ❌ WRONG — dùng exception cho business rule
+   if (!doc.CanPublish()) throw new DocumentAlreadyPublishedException(doc.Id);
+   // ✅ CORRECT — dùng Result pattern
+   var result = doc.Publish(publishedBy);
+   if (result.IsFailure) return result;
+   ```
+
+2. **KHÔNG** throw generic `Exception` hay `ApplicationException`:
    ```csharp
    // ❌ WRONG
    throw new Exception("Document not found");
    // ✅ CORRECT
-   throw new NotFoundException(nameof(Document), id);
+   return DocumentErrors.NotFound;
    ```
 
-2. **KHÔNG** log exception nhiều lần trong cùng call stack (log once tại middleware).
+3. **KHÔNG** log exception nhiều lần trong cùng call stack (log once tại middleware).
 
-3. **KHÔNG** expose stack trace, inner exception details, hoặc connection string ra response body ở production:
+4. **KHÔNG** expose stack trace, inner exception details ra response body ở production.
+
+5. **KHÔNG** dùng exception để điều khiển control flow:
    ```csharp
    // ❌ WRONG
-   return Problem(detail: ex.ToString()); // lộ stack trace
-   // ✅ CORRECT
-   return Problem(detail: "An internal error occurred. TraceId: " + traceId);
-   ```
-
-4. **KHÔNG** dùng exception để điều khiển control flow thông thường:
-   ```csharp
-   // ❌ WRONG — dùng exception để check tồn tại
    try { var doc = _repo.GetById(id); }
    catch (NotFoundException) { return false; }
    // ✅ CORRECT
-   var exists = await _repo.ExistsAsync(id, ct);
-   ```
-
-5. **KHÔNG** swallow exception mà không log:
-   ```csharp
-   // ❌ WRONG
-   catch (Exception) { return null; }
-   // ✅ CORRECT
-   catch (Exception ex) { _logger.LogWarning(ex, "..."); return null; }
+   var result = await _queryHandler.Handle(new GetDocumentByIdQuery(id), ct);
    ```
 
 6. **KHÔNG** catch `OperationCanceledException` và log như Error — đây là hành vi bình thường khi client disconnect.
 
+7. **KHÔNG** dùng Exception hierarchy (DomainException, NotFoundException) cho business errors — dùng `Error` static constants.
+
 ## Ví dụ minh họa
 
 ```csharp
-// ── Domain/Exceptions/DomainException.cs
-public abstract class DomainException : Exception
-{
-    protected DomainException(string message) : base(message) { }
-    protected DomainException(string message, Exception inner) : base(message, inner) { }
-}
+// ── Domain/Common/Error.cs
+namespace {Namespace}.Domain.Common;
 
-public class DocumentAlreadyPublishedException : DomainException
-{
-    public Guid DocumentId { get; }
-    public DocumentAlreadyPublishedException(Guid documentId)
-        : base($"Document '{documentId}' is already published and cannot be modified.")
-        => DocumentId = documentId;
-}
+public enum ErrorType { Failure, Validation, NotFound, Conflict, Unauthorized, Forbidden, ServiceUnavailable }
 
-// ── Application/Exceptions/NotFoundException.cs
-public class NotFoundException : Exception
+public readonly struct Error
 {
-    public NotFoundException(string entityName, object id)
-        : base($"{entityName} with id '{id}' was not found.") { }
-}
+    public ErrorType Type { get; }
+    public string Code { get; }
+    public string Description { get; }
 
-// ── Api/Middleware/GlobalExceptionHandler.cs (.NET 8 IExceptionHandler)
-public class GlobalExceptionHandler : IExceptionHandler
-{
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext context, Exception exception, CancellationToken ct)
+    private Error(ErrorType type, string code, string description)
     {
-        var traceId = context.Items["TraceId"]?.ToString() ?? Activity.Current?.TraceId.ToString();
+        Type = type;
+        Code = code;
+        Description = description;
+    }
 
-        var (statusCode, title) = exception switch
+    public static Error NotFound(string code, string description) =>
+        new(ErrorType.NotFound, code, description);
+
+    public static Error Validation(string code, string description) =>
+        new(ErrorType.Validation, code, description);
+
+    public static Error Conflict(string code, string description) =>
+        new(ErrorType.Conflict, code, description);
+
+    public static Error Failure(string code, string description) =>
+        new(ErrorType.Failure, code, description);
+
+    public static Error Forbidden(string code, string description) =>
+        new(ErrorType.Forbidden, code, description);
+
+    public static Error ServiceUnavailable(string code, string description) =>
+        new(ErrorType.ServiceUnavailable, code, description);
+}
+
+// ── Domain/Common/Result.cs
+namespace {Namespace}.Domain.Common;
+
+public class Result
+{
+    public bool IsSuccess { get; }
+    public bool IsFailure => !IsSuccess;
+    public Error Error { get; }
+
+    protected Result(bool isSuccess, Error error)
+    {
+        IsSuccess = isSuccess;
+        Error = error;
+    }
+
+    public static Result Success() => new(true, default);
+    public static Result Failure(Error error) => new(false, error);
+}
+
+public class Result<T> : Result
+{
+    public T Value { get; }
+
+    private Result(bool isSuccess, Error error, T value)
+        : base(isSuccess, error)
+    {
+        Value = value;
+    }
+
+    public static Result<T> Success(T value) => new(true, default, value);
+    public static new Result<T> Failure(Error error) => new(false, error, default!);
+}
+```
+
+```csharp
+// ── Domain entity dùng Result
+public class Document : AggregateRoot<DocumentId>
+{
+    public Result Publish(UserId publishedBy)
+    {
+        if (Status == DocumentStatus.Published)
+            return DocumentErrors.AlreadyPublished;
+
+        Status = DocumentStatus.Published;
+        RaiseDomainEvent(new DocumentPublishedEvent(Id, TenantId, publishedBy));
+        return Result.Success();
+    }
+}
+```
+
+```csharp
+// ── Application/Extensions/ResultExtensions.cs
+namespace {Namespace}.Application.Extensions;
+
+public static class ResultExtensions
+{
+    public static IActionResult ToActionResult<T>(this Result<T> result)
+    {
+        if (result.IsSuccess)
+            return new OkObjectResult(result.Value);
+        return MapErrorToActionResult(result.Error);
+    }
+
+    public static IActionResult ToActionResult(this Error error) =>
+        MapErrorToActionResult(error);
+
+    private static IActionResult MapErrorToActionResult(Error error) =>
+        error.Type switch
         {
-            OperationCanceledException    => (0, null),          // ignore, client disconnected
-            ValidationException vex       => (422, "Validation Failed"),
-            DomainException               => (422, "Business Rule Violation"),
-            NotFoundException             => (404, "Not Found"),
-            ConflictException             => (409, "Conflict"),
-            UnauthorizedAccessException   => (403, "Forbidden"),
-            InfrastructureException       => (502, "Upstream Error"),
-            _                            => (500, "Internal Server Error"),
+            ErrorType.NotFound => new NotFoundObjectResult(CreateProblemDetails(error, 404, "Not Found")),
+            ErrorType.Validation => new UnprocessableEntityObjectResult(CreateValidationProblemDetails(error)),
+            ErrorType.Conflict => new ConflictObjectResult(CreateProblemDetails(error, 409, "Conflict")),
+            ErrorType.Unauthorized => new UnauthorizedObjectResult(CreateProblemDetails(error, 401, "Unauthorized")),
+            ErrorType.Forbidden => new ForbidResult(CreateProblemDetails(error, 403, "Forbidden")),
+            ErrorType.ServiceUnavailable => new ObjectResult(CreateProblemDetails(error, 503, "Service Unavailable")) { StatusCode = 503 },
+            _ => new ObjectResult(CreateProblemDetails(error, 500, "Internal Server Error")) { StatusCode = 500 }
         };
 
-        if (statusCode == 0) return false; // let ASP.NET handle cancellation
-
-        _logger.LogError(exception,
-            "Exception {ExceptionType} for {Method} {Path} TraceId={TraceId}",
-            exception.GetType().Name, context.Request.Method, context.Request.Path, traceId);
-
-        context.Response.StatusCode = statusCode;
-        await context.Response.WriteAsJsonAsync(new ProblemDetails
+    private static ProblemDetails CreateProblemDetails(Error error, int status, string title) =>
+        new()
         {
-            Status   = statusCode,
-            Title    = title,
-            Detail   = statusCode == 500 ? $"TraceId: {traceId}" : exception.Message,
-            Extensions = { ["traceId"] = traceId }
+            Status = status,
+            Title = title,
+            Type = $"https://httpstatuses.com/{status}",
+            Extensions = { ["errorCode"] = error.Code, ["errorDescription"] = error.Description }
+        };
+
+    private static ValidationProblemDetails CreateValidationProblemDetails(Error error) =>
+        new(new Dictionary<string, string[]> { { error.Code, new[] { error.Description } } })
+        {
+            Status = 400,
+            Title = "Validation Failed",
+            Type = "https://httpstatuses.com/400"
+        };
+}
+```
+
+```csharp
+// ── Handler dùng Result
+internal sealed class DeleteDocumentCommandHandler(IApplicationDbContext dbContext)
+    : ICommandHandler<DeleteDocumentCommand>
+{
+    public async ValueTask<Result> Handle(DeleteDocumentCommand cmd, CancellationToken ct)
+    {
+        var doc = await dbContext.Documents
+            .FirstOrDefaultAsync(d => d.Id == new DocumentId(cmd.Id), ct);
+
+        if (doc is null)
+            return DocumentErrors.NotFound;
+
+        var result = doc.Delete();
+        if (result.IsFailure)
+            return result;
+
+        await dbContext.SaveChangesAsync(ct);
+        return Result.Success();
+    }
+}
+```
+
+```csharp
+// ── GlobalExceptionHandler — chỉ cho unhandled exceptions
+public class GlobalExceptionHandler : IExceptionHandler
+{
+    public async ValueTask<bool> TryHandleAsync(HttpContext ctx, Exception ex, CancellationToken ct)
+    {
+        if (ex is OperationCanceledException) return false;
+
+        _logger.LogError(ex, "Unhandled exception for {Method} {Path}", ctx.Request.Method, ctx.Request.Path);
+        var traceId = Activity.Current?.TraceId.ToString();
+
+        ctx.Response.StatusCode = 500;
+        await ctx.Response.WriteAsJsonAsync(new ProblemDetails
+        {
+            Status = 500,
+            Title = "Internal Server Error",
+            Detail = Environment.IsDevelopment() ? ex.Message : "An error occurred.",
+            Type = "https://httpstatuses.com/500",
+            Extensions = { ["traceId"] = traceId ?? "" }
         }, ct);
 
         return true;
     }
 }
-
-// ── Program.cs
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-builder.Services.AddProblemDetails();
-app.UseExceptionHandler();
 ```

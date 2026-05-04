@@ -52,38 +52,31 @@
    Tăng lock contention, giảm concurrency.
 
 4. **KHÔNG** dùng EF Core cho read path phức tạp.
-   Dùng Dapper + SQL thuần (xem `ai-rules/02-cqrs-pattern.md`).
+   Dùng Dapper + Stored Procedure (xem `ai-rules/02-cqrs-pattern.md`).
 
-5. **KHÔNG** bỏ qua `DbUpdateConcurrencyException`.
+5. **KHÔNG** viết SQL thuần trong code C# cho read path. Dùng Stored Procedure.
+
+6. **KHÔNG** bỏ qua `DbUpdateConcurrencyException`.
    Phải xử lý rõ ràng: reload entity → apply conflict resolution → trả lỗi 409 Conflict cho client.
 
-6. **KHÔNG** share DbContext giữa các thread.
+7. **KHÔNG** share DbContext giữa các thread.
    Mỗi request phải có DbContext scope riêng (đã được DI container đảm bảo mặc định).
 
 ## Ví dụ minh họa
 
 ```csharp
-// ── Concurrency conflict handling
-public async Task<IActionResult> UpdateDocument(
-    UpdateDocumentCommand cmd, CancellationToken ct)
+// ── Concurrency conflict handling trong Controller
+[HttpPut("{id:guid}")]
+public async Task<IActionResult> Update(Guid id, UpdateDocumentCommand cmd, CancellationToken ct)
 {
-    try
-    {
-        await _mediator.Send(cmd, ct);
-        return NoContent();
-    }
-    catch (DbUpdateConcurrencyException ex)
-    {
-        return Conflict(new ProblemDetails
-        {
-            Status = 409,
-            Title = "ConcurrencyConflict",
-            Detail = "The document was modified by another user. Please refresh and retry."
-        });
-    }
+    var result = await Sender.Send(new UpdateDocumentCommand(id, cmd.Title), ct);
+    return result.ToActionResult();
 }
 
-// ── AsNoTracking cho read
+// GlobalExceptionHandler catch DbUpdateConcurrencyException
+// → map sang Error.Conflict() → trả 409 Conflict
+
+// ── AsNoTracking cho read đơn giản
 public async Task<IReadOnlyList<DocumentSummaryDto>> GetDocuments(
     Guid tenantId, CancellationToken ct)
 {
