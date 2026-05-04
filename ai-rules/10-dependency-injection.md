@@ -4,6 +4,13 @@
 
 ---
 
+## Mediator Library
+
+Dự án dùng **Mediator (Arch.Ext)** với các interface `ICommand`, `IQuery`, `ICommandHandler`, `IQueryHandler`.
+**KHÔNG dùng MediatR (Jimmy Bogard).**
+
+---
+
 ## DO
 
 1. **Tổ chức registration theo module/bounded context** bằng extension methods:
@@ -17,8 +24,8 @@
    ```
 
 2. **Mỗi layer tự đăng ký qua `IServiceCollection` extension** đặt trong layer đó:
-   - `Application/DependencyInjection.cs` → `AddApplicationServices()`
-   - `Infrastructure/DependencyInjection.cs` → `AddInfrastructureServices()`
+   - `Application/DependencyInjection.cs` → `AddApplication()`
+   - `Infrastructure/DependencyInjection.cs` → `AddInfrastructure()`
    - `Api/DependencyInjection.cs` → `AddApiServices()`
 
 3. **Chọn service lifetime đúng:**
@@ -30,22 +37,23 @@
 
 4. **Bật validation container ở startup** để phát hiện lỗi ngay:
    ```csharp
-   builder.Services.BuildServiceProvider(new ServiceProviderOptions
+   builder.Host.UseDefaultServiceProvider((ctx, opts) =>
    {
-       ValidateOnBuild = true,
-       ValidateScopes  = true,
+       opts.ValidateScopes  = ctx.HostingEnvironment.IsDevelopment();
+       opts.ValidateOnBuild = ctx.HostingEnvironment.IsDevelopment();
    });
    ```
 
-5. **Register MediatR, FluentValidation, AutoMapper theo assembly scan:**
+5. **Register Mediator và FluentValidation theo assembly scan:**
    ```csharp
-   services.AddMediatR(cfg =>
+   services.AddMediator(options =>
    {
-       cfg.RegisterServicesFromAssembly(typeof(CreateDocumentCommand).Assembly);
-       cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
-       cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+       options.Namespace = "{Namespace}.Application";
+       options.ServiceLifetime = ServiceLifetime.Scoped;
    });
-   services.AddValidatorsFromAssembly(typeof(CreateDocumentCommandValidator).Assembly);
+   services.AddValidatorsFromAssembly(typeof(CreateDocumentCommand).Assembly);
+   services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+   services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
    ```
 
 6. **Dùng `Keyed Services`** (.NET 8) khi cần nhiều implementation của cùng interface:
@@ -95,11 +103,7 @@
    public class CacheSingleton(IServiceScopeFactory factory) { ... }
    ```
 
-6. **KHÔNG** dùng `new` trực tiếp để tạo service trong application code:
-   ```csharp
-   // ❌ WRONG
-   var service = new DocumentService(new EfDocumentRepository(...));
-   ```
+6. **KHÔNG** dùng `new` trực tiếp để tạo service trong application code.
 
 ## Ví dụ minh họa
 
@@ -115,8 +119,28 @@ builder.Services
 var app = builder.Build();
 app.Run();
 
+// ── Application/DependencyInjection.cs
+public static class DependencyInjection
+{
+    public static IServiceCollection AddApplication(this IServiceCollection services)
+    {
+        services.AddMediator(options =>
+        {
+            options.Namespace = "{Namespace}.Application";
+            options.ServiceLifetime = ServiceLifetime.Scoped;
+        });
+
+        services.AddValidatorsFromAssembly(typeof(CreateDocumentCommand).Assembly);
+
+        services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+        services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
+        return services;
+    }
+}
+
 // ── Infrastructure/DependencyInjection.cs
-public static class InfrastructureDependencyInjection
+public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services, IConfiguration config)
@@ -126,38 +150,12 @@ public static class InfrastructureDependencyInjection
             opts.UseNpgsql(config.GetConnectionString("Postgres"),
                 npgsql => npgsql.CommandTimeout(30)));
 
-        // Repositories
-        services.AddScoped<IDocumentRepository, EfDocumentRepository>();
-
         // Outbox processor
         services.AddHostedService<OutboxProcessor>();
 
         // Redis cache
         services.AddStackExchangeRedisCache(opts =>
             opts.Configuration = config.GetConnectionString("Redis"));
-
-        return services;
-    }
-}
-
-// ── Application/DependencyInjection.cs
-public static class ApplicationDependencyInjection
-{
-    public static IServiceCollection AddApplication(this IServiceCollection services)
-    {
-        services.AddMediatR(cfg =>
-        {
-            cfg.RegisterServicesFromAssembly(typeof(CreateDocumentCommand).Assembly);
-            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
-            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
-            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(AuditBehavior<,>));
-        });
-
-        services.AddValidatorsFromAssembly(
-            typeof(CreateDocumentCommandValidator).Assembly, includeInternalTypes: true);
-
-        services.AddScoped<ICurrentUser, CurrentUser>();
-        services.AddScoped<ITenantContext, TenantContext>();
 
         return services;
     }
