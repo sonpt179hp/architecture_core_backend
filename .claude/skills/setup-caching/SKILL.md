@@ -1,125 +1,297 @@
----
-name: setup-caching
-description: >
-  Scaffold distributed caching infrastructure: Redis connection, cache service abstraction,
-  cached repository decorator pattern, cache key conventions with TenantId prefix,
-  and cache invalidation helpers. Use when adding caching to a bounded context.
-allowed-tools:
-  - Read(**/*.cs)
-  - Read(**/ai-rules/*.md)
-  - Glob(src/**/*.cs)
-  - Glob(src/**/*.csproj)
-  - Edit(**/*.cs)
----
-
-# Skill: Setup Caching Infrastructure
+ư# Skill: Setup Caching Infrastructure
 
 ## Purpose
 
-Dựng hạ tầng caching với Redis, cache-aside pattern, TTL rõ ràng, cache key có TenantId prefix.
-Dùng Decorator Pattern để bọc repository — không nhét cache logic vào handler.
+Dựng hạ tầng caching với Redis, cache-aside pattern, TTL rõ ràng.
+Dùng `ICacheService` abstraction, cache-aside pattern, graceful fallback khi Redis down.
+
+## Convention Mapping
+
+| Artifact | Convention | Pattern |
+|---|---|---|
+| **ICacheService** | Interface trong `Application/Abstractions/Caching/` | |
+| **CacheService** | Implementation trong `Infrastructure/Caching/` | |
+| **RedisOptions** | Options class với `SectionName` | |
+| **DI Registration** | `AddScoped<ICacheService, CacheService>` | |
+| **Serialization** | `System.Text.Json` với `PropertyNamingPolicy = JsonNamingPolicy.CamelCase` | |
+
+## ICacheService Interface
+
+```csharp
+public interface ICacheService
+{
+    Task<T?> GetAsync<T>(string key, CancellationToken ct = default);
+    Task SetAsync<T>(string key, T value, TimeSpan? expiry = null, CancellationToken ct = default);
+    Task RemoveAsync(string key, CancellationToken ct = default);
+    Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> factory, TimeSpan? expiry = null, CancellationToken ct = default);
+}
+```
+
+## Project Structure
+
+```
+src/
+├── Application/
+│   └── Abstractions/
+│       └── Caching/
+│           ├── ICacheService.cs
+│           └── I{Entity}CacheService.cs  ← Feature cache interface
+└── Infrastructure/
+    └── Caching/
+        ├── CacheKeys.cs
+        ├── CacheService.cs
+        ├── RedisOptions.cs
+        └── {Feature}/
+            └── {Entity}CachingService.cs
+```
 
 ## Instructions
 
-**Input:** Tên repository hoặc service cần cache (ví dụ: `DocumentRepository`), TTL mặc định (ví dụ: 10 phút).
+**Input:** Tên service hoặc feature cần cache, TTL mặc định.
 
-1. **Đọc cấu trúc project hiện tại** để xác định:
-   - Repository interface đã tồn tại chưa
-   - Redis đã được đăng ký trong DI chưa
-   - Có `ITenantContext` chưa
+### Step 1: Create CacheKeys Helper
 
-2. **Đăng ký Redis trong `Infrastructure/DependencyInjection.cs`** nếu chưa có:
-   ```csharp
-   services.AddStackExchangeRedisCache(opts =>
-       opts.Configuration = config.GetConnectionString("Redis"));
-   ```
+`src/{Solution}/Infrastructure/Caching/CacheKeys.cs`:
 
-3. **Tạo `CacheKeys` helper** tại `Infrastructure/Caching/CacheKeys.cs`:
-   ```csharp
-   public static class CacheKeys
-   {
-       public static string Document(Guid tenantId, Guid docId) =>
-           $"tenant:{tenantId}:doc:{docId}";
+```csharp
+namespace {Namespace}.Infrastructure.Caching;
 
-       public static string DocumentList(Guid tenantId, int page, int pageSize) =>
-           $"tenant:{tenantId}:docs:page:{page}:size:{pageSize}";
+public static class CacheKeys
+{
+    public static string Entity(Guid entityId) =>
+        $"entity:{entityId}";
 
-       public static string OrgTree(Guid tenantId) =>
-           $"tenant:{tenantId}:org-tree";
-   }
-   ```
+    public static string EntityList(int page, int pageSize) =>
+        $"entities:page:{page}:size:{pageSize}";
 
-4. **Tạo Cached Repository Decorator** tại `Infrastructure/Caching/Cached{Entity}Repository.cs`:
-   ```csharp
-   public class CachedDocumentRepository : IDocumentRepository
-   {
-       private readonly IDocumentRepository _inner;
-       private readonly IDistributedCache _cache;
-       private readonly ITenantContext _tenant;
-       private readonly ILogger<CachedDocumentRepository> _logger;
-       private static readonly TimeSpan Ttl = TimeSpan.FromMinutes(10);
+    public static string EntityByTenant(Guid tenantId, Guid entityId) =>
+        $"tenant:{tenantId}:entity:{entityId}";
 
-       public async Task<Document?> GetByIdAsync(Guid id, CancellationToken ct)
-       {
-           var key = CacheKeys.Document(_tenant.TenantId, id);
-           try
-           {
-               var cached = await _cache.GetStringAsync(key, ct);
-               if (cached is not null)
-                   return JsonSerializer.Deserialize<Document>(cached);
-           }
-           catch (RedisException ex)
-           {
-               _logger.LogWarning(ex, "Redis unavailable for key {CacheKey}", key);
-           }
+    // Thêm cache keys khác theo nhu cầu
+}
+```
 
-           var entity = await _inner.GetByIdAsync(id, ct);
-           if (entity is not null)
-           {
-               try
-               {
-                   await _cache.SetStringAsync(key, JsonSerializer.Serialize(entity),
-                       new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = Ttl }, ct);
-               }
-               catch (RedisException ex)
-               {
-                   _logger.LogWarning(ex, "Failed to cache document {DocumentId}", id);
-               }
-           }
-           return entity;
-       }
+### Step 2: Create ICacheService Implementation
 
-       public async Task UpdateAsync(Document entity, CancellationToken ct)
-       {
-           await _inner.UpdateAsync(entity, ct);
-           await _cache.RemoveAsync(CacheKeys.Document(_tenant.TenantId, entity.Id), ct);
-       }
-   }
-   ```
+`src/{Solution}/Infrastructure/Caching/CacheService.cs`:
 
-5. **Đăng ký Decorator trong DI** (dùng Scrutor package):
-   ```csharp
-   services.AddScoped<IDocumentRepository, EfDocumentRepository>();
-   services.Decorate<IDocumentRepository, CachedDocumentRepository>();
-   ```
-   Nếu chưa có Scrutor: `dotnet add package Scrutor`
+```csharp
+using System.Text.Json;
+using {Namespace}.Application.Abstractions.Caching;
+using Microsoft.Extensions.Caching.Distributed;
 
-6. **Thêm cache invalidation** cho các method write (Update, Delete):
-   - Sau mỗi write operation → `_cache.RemoveAsync(key)`
-   - Nếu có list cache → invalidate cả list key pattern
+namespace {Namespace}.Infrastructure.Caching;
 
-7. **Kiểm tra lại:**
-   - Cache key luôn có `tenant:{tenantId}:` prefix
-   - TTL được đặt rõ ràng, không cache mãi mãi
-   - Redis down không làm crash app — có fallback về DB
-   - Write operations invalidate cache đúng key
+internal sealed class CacheService(IDistributedCache cache) : ICacheService
+{
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
+    public async Task<T?> GetAsync<T>(string key, CancellationToken ct = default)
+    {
+        var bytes = await cache.GetAsync(key, ct);
+        return bytes is null ? default : JsonSerializer.Deserialize<T>(bytes, JsonOptions);
+    }
+
+    public async Task SetAsync<T>(
+        string key,
+        T value,
+        TimeSpan? expiry = null,
+        CancellationToken ct = default)
+    {
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(value, JsonOptions);
+        var options = new DistributedCacheEntryOptions();
+
+        if (expiry.HasValue)
+        {
+            options.AbsoluteExpirationRelativeToNow = expiry;
+        }
+
+        await cache.SetAsync(key, bytes, options, ct);
+    }
+
+    public async Task RemoveAsync(string key, CancellationToken ct = default) =>
+        await cache.RemoveAsync(key, ct);
+
+    public async Task<T> GetOrCreateAsync<T>(
+        string key,
+        Func<Task<T>> factory,
+        TimeSpan? expiry = null,
+        CancellationToken ct = default)
+    {
+        var cached = await GetAsync<T>(key, ct);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        var value = await factory();
+        await SetAsync(key, value, expiry, ct);
+        return value;
+    }
+}
+```
+
+### Step 3: Create Feature Cache Service
+
+`src/{Solution}/Infrastructure/Caching/{Feature}/{Entity}CachingService.cs`:
+
+```csharp
+using {Namespace}.Application.Abstractions.Caching;
+using {Namespace}.Domain.{Feature};
+
+namespace {Namespace}.Infrastructure.Caching.{Feature};
+
+internal sealed class {Entity}CachingService : I{Entity}CacheService
+{
+    private readonly ICacheService _cache;
+    private readonly ILogger<{Entity}CachingService> _logger;
+    private static readonly TimeSpan DefaultTtl = TimeSpan.FromMinutes(10);
+
+    public {Entity}CachingService(
+        ICacheService cache,
+        ILogger<{Entity}CachingService> logger)
+    {
+        _cache = cache;
+        _logger = logger;
+    }
+
+    public async Task<{Entity}?> GetByIdAsync(Guid id, CancellationToken ct)
+    {
+        var key = CacheKeys.Entity(id);
+        try
+        {
+            return await _cache.GetAsync<{Entity}>(key, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Cache get failed for key {Key}", key);
+            return null;
+        }
+    }
+
+    public async Task SetAsync({Entity} entity, TimeSpan? ttl = null, CancellationToken ct = default)
+    {
+        var key = CacheKeys.Entity(entity.Id.Value);
+        try
+        {
+            await _cache.SetAsync(key, entity, ttl ?? DefaultTtl, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Cache set failed for key {Key}", key);
+        }
+    }
+
+    public async Task InvalidateAsync(Guid id, CancellationToken ct = default)
+    {
+        var key = CacheKeys.Entity(id);
+        try
+        {
+            await _cache.RemoveAsync(key, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Cache invalidate failed for key {Key}", key);
+        }
+    }
+}
+```
+
+### Step 4: Register in DependencyInjection
+
+Trong `Infrastructure/DependencyInjection.cs`:
+
+```csharp
+services.AddStackExchangeRedisCache(_ => { });
+services.AddScoped<ICacheService, CacheService>();
+services.AddScoped<I{Entity}CacheService, {Entity}CachingService>();
+```
+
+### Step 5: Integrate Into Query Handler (Cache-Aside)
+
+```csharp
+internal sealed class Get{Entity}ByIdQueryHandler(
+    IApplicationDbContext dbContext,
+    I{Entity}CacheService cache) : IQueryHandler<Get{Entity}ByIdQuery, Get{Entity}ByIdResponse>
+{
+    public async ValueTask<Result<Get{Entity}ByIdResponse>> Handle(
+        Get{Entity}ByIdQuery query,
+        CancellationToken cancellationToken)
+    {
+        // Step 1: Try cache
+        var cached = await cache.GetByIdAsync(query.{Entity}Id, cancellationToken);
+        if (cached is not null)
+        {
+            return cached.ToResponse();
+        }
+
+        // Step 2: Query DB
+        var entityId = new {Entity}Id(query.{Entity}Id);
+        var entity = await dbContext.{Entities}
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == entityId, cancellationToken);
+
+        if (entity is null)
+        {
+            return {Entity}Errors.NotFound;
+        }
+
+        // Step 3: Cache result
+        await cache.SetAsync(entity, cancellationToken);
+
+        return entity.ToResponse();
+    }
+}
+```
+
+### Step 6: Integrate Into Command Handler (Invalidation)
+
+```csharp
+internal sealed class Create{Entity}CommandHandler(
+    IApplicationDbContext dbContext,
+    I{Entity}CacheService cache) : ICommandHandler<Create{Entity}Command, {Entity}Id>
+{
+    public async ValueTask<Result<{Entity}Id>> Handle(
+        Create{Entity}Command command,
+        CancellationToken cancellationToken)
+    {
+        var result = {Entity}.Create(command.Name, command.Price);
+
+        if (result.IsFailure)
+        {
+            return Result<{Entity}Id>.Failure(result.Error);
+        }
+
+        var entity = result.Value;
+        dbContext.{Entities}.Add(entity);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Invalidate list caches
+        await cache.InvalidateListCachesAsync(cancellationToken);
+
+        return Result<{Entity}Id>.Success(entity.Id);
+    }
+}
+```
+
+## Checklist
+
+- [ ] Cache key có prefix rõ ràng theo entity
+- [ ] TTL được đặt rõ ràng (mặc định 10 phút)
+- [ ] Redis down không crash app — có fallback sang DB
+- [ ] Write operations invalidate cache đúng key
+- [ ] Cache service là Scoped lifetime
+- [ ] Log warning khi Redis unavailable, không throw
 
 ## Edge Cases
 
-- Nếu entity có relationship phức tạp: chỉ cache entity root, không cache toàn bộ graph.
-- Nếu cần cache list query: cache theo hash của filter params, nhưng cẩn thận với cache pollution.
-- Nếu Redis cluster: đảm bảo key distribution đều (không để tất cả key cùng prefix vào 1 shard).
-- Nếu cần cache warming: tạo background job load hot data vào cache sau khi app start.
+- Entity có relationship phức tạp: chỉ cache entity root.
+- Cache list query: cache theo hash của filter params, cẩn thận cache pollution.
+- Multi-tenant: luôn include `TenantId` trong cache key.
+- Cache warming: tạo `IHostedService` load hot data sau startup.
 
 ## References
 

@@ -1,18 +1,3 @@
----
-name: setup-configuration
-description: >
-  Scaffold the configuration layer: Options classes with validation,
-  appsettings.json section structure, secrets strategy, feature flags,
-  and registration via AddOptions(). Use when introducing new external dependencies or app modules.
-allowed-tools:
-  - Read(**/*.cs)
-  - Read(appsettings*.json)
-  - Read(**/ai-rules/*.md)
-  - Glob(src/**/*.cs)
-  - Edit(**/*.cs)
-  - Edit(appsettings*.json)
----
-
 # Skill: Setup Configuration Layer
 
 ## Purpose
@@ -20,83 +5,119 @@ allowed-tools:
 Chuẩn hóa config theo Options Pattern, validate ngay tại startup, tách secrets khỏi source code.
 Không để business logic đọc `IConfiguration` trực tiếp.
 
+## Convention Mapping
+
+| Artifact | Convention | Pattern |
+|---|---|---|
+| **Options class** | `public sealed class {Name}Options` | |
+| **SectionName** | `public const string SectionName = "{Name}";` | |
+| **Validation** | `ValidateDataAnnotations()` + `ValidateOnStart()` | |
+| **Registration** | `AddOptions<T>().Bind().Validate().ValidateOnStart()` | |
+| **appsettings** | `appsettings.json` + `appsettings.{Environment}.json` | |
+
+## Project Structure
+
+```
+src/
+├── Infrastructure/
+│   └── Options/
+│       ├── {Name}Options.cs
+│       └── {Other}Options.cs
+└── Api/
+    └── appsettings.json
+```
+
 ## Instructions
 
-**Input:** Tên module hoặc dependency cần cấu hình (ví dụ: `Database`, `Jwt`, `RabbitMq`, `Redis`).
+**Input:** Tên module cần cấu hình (Jwt, Redis, RabbitMQ, Database...).
 
-1. **Đọc `appsettings.json` và `Program.cs` hiện tại** để xác định:
-   - Section đã tồn tại chưa
-   - Có đang đọc `IConfiguration` trực tiếp ở đâu không
+### Step 1: Create Options Class
 
-2. **Tạo Options class** tại `Infrastructure/Options/{Name}Options.cs`:
-   ```csharp
-   public class DatabaseOptions
-   {
-       public const string SectionName = "Database";
+`src/{Solution}/Infrastructure/Options/{Name}Options.cs`:
 
-       [Required] public string ConnectionString { get; set; } = default!;
-       [Range(1, 10)] public int MaxRetryCount { get; set; } = 3;
-       [Range(5, 300)] public int CommandTimeoutSeconds { get; set; } = 30;
-   }
-   ```
-   - Dùng Data Annotations: `[Required]`, `[Range]`, `[Url]`, `[EmailAddress]` khi phù hợp
-   - Không dùng `string` literal cho section name — luôn có `SectionName` constant
+```csharp
+namespace {Namespace}.Infrastructure.Options;
 
-3. **Cập nhật `appsettings.json` structure** nếu section chưa có:
-   ```json
-   {
-     "Database": {
-       "MaxRetryCount": 3,
-       "CommandTimeoutSeconds": 30
-     },
-     "Features": {
-       "EnableAiSuggestions": false
-     }
-   }
-   ```
-   - Không thêm secrets thật vào file nếu repo sẽ được commit
-   - Chỉ thêm placeholder / non-secret defaults
+public sealed class {Name}Options
+{
+    public const string SectionName = "{Name}";
 
-4. **Đăng ký Options trong `Infrastructure/DependencyInjection.cs` hoặc `Program.cs`:**
-   ```csharp
-   services.AddOptions<DatabaseOptions>()
-       .BindConfiguration(DatabaseOptions.SectionName)
-       .ValidateDataAnnotations()
-       .ValidateOnStart();
-   ```
+    // Required fields
+    public string Host { get; set; } = string.Empty;
+    public int Port { get; set; } = 80;
 
-5. **Refactor services đang dùng `IConfiguration` trực tiếp**:
-   ```csharp
-   // ❌ WRONG
-   public class MyService(IConfiguration config) { ... }
+    // Optional fields với defaults
+    public string? Password { get; set; }
+    public int TimeoutSeconds { get; set; } = 30;
+    public int MaxRetries { get; set; } = 3;
+}
+```
 
-   // ✅ CORRECT
-   public class MyService(IOptions<DatabaseOptions> options)
-   {
-       _dbOptions = options.Value;
-   }
-   ```
+**Quy tắc Options class:**
 
-6. **Thêm feature flags** nếu module cần bật/tắt theo config:
-   ```csharp
-   public class FeatureFlags
-   {
-       public const string SectionName = "Features";
-       public bool EnableAiSuggestions { get; set; }
-   }
-   ```
+- Có `SectionName = "{Name}"` constant
+- Dùng auto-properties
+- Required fields không có default hoặc có default rõ ràng
+- Có Data Annotations: `[Required]`, `[Range]`, `[Url]`
 
-7. **Kiểm tra lại:**
-   - Mọi Options class có `ValidateOnStart()` chưa
-   - Không còn `IConfiguration["Section:Key"]` trong business services
-   - Secrets không bị hardcode trong appsettings.json
+### Step 2: Update appsettings.json
+
+```json
+{
+  "{Name}": {
+    "Host": "localhost",
+    "Port": 6379,
+    "Password": null,
+    "TimeoutSeconds": 30,
+    "MaxRetries": 3
+  }
+}
+```
+
+### Step 3: Register Options in DI
+
+```csharp
+private static IServiceCollection Add{Name}(this IServiceCollection services, IConfiguration configuration)
+{
+    services
+        .AddOptions<{Name}Options>()
+        .Bind(configuration.GetSection({Name}Options.SectionName))
+        .ValidateDataAnnotations()
+        .ValidateOnStart();
+
+    return services;
+}
+```
+
+### Step 4: Inject into Service
+
+```csharp
+// KHÔNG làm thế này
+public class MyService(IConfiguration config)
+{
+    var host = config["{Name}:Host"]; // ❌ WRONG
+}
+
+// MÀ LÀM THẾ NÀY
+public class MyService(IOptions<{Name}Options> options)
+{
+    var host = options.Value.Host; // ✅ CORRECT
+}
+```
+
+## Checklist
+
+- [ ] Options class có `SectionName` constant
+- [ ] Options được validate bằng Data Annotations
+- [ ] `ValidateOnStart()` được gọi — app fail fast nếu config sai
+- [ ] Secrets không bị hardcode trong appsettings.json
+- [ ] Business services dùng `IOptions<T>` thay vì `IConfiguration`
 
 ## Edge Cases
 
-- Nếu dependency hỗ trợ secret rotation (Key Vault, Swarm secrets): dùng `IOptionsMonitor<T>` thay vì `IOptions<T>`.
-- Nếu config thay đổi theo request/tenant: không dùng global Options — tạo abstraction `ITenantConfigProvider` riêng.
-- Nếu section là collection (nhiều endpoints, nhiều queues): dùng `List<TOptionsItem>` trong Options class.
-- Nếu project chưa có `appsettings.Development.json`: tạo file này để chứa non-committed dev overrides.
+- Secret rotation (Key Vault): dùng `IOptionsMonitor<T>`.
+- Environment-specific config: tạo `appsettings.{Environment}.json`.
+- Secrets từ environment: dùng `Environment.GetEnvironmentVariable()`.
 
 ## References
 
