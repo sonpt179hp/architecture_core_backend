@@ -79,7 +79,7 @@ Domain layer phải hoàn toàn không phụ thuộc framework (không EF annota
 
 ## References
 
-- `ai-rules/01-clean-architecture.md` — dependency rule, Domain thuần, không dùng EF annotations
-- `ai-rules/03-security-tenancy.md` — ITenantEntity, Global Query Filter, không inject TenantContext vào Domain
-- `ai-rules/08-efcore.md` — Fluent Configuration, concurrency token, transaction boundaries
-- `ai-rules/07-testing.md` — cần unit test cho aggregate/value objects sau khi scaffold
+- `ai-rules/01-clean-architecture.md` — Domain thuần, dependency rule
+- `ai-rules/03-security-tenancy.md` — ITenantEntity, Global Query Filter boundaries
+- `ai-rules/08-efcore.md` — Fluent Configuration, concurrency token
+- `ai-rules/07-testing.md` — unit test expectations for Aggregate/Value Objects

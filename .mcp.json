@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "roslyn": {
+      "command": "Microsoft.MCP.Server.Roslyn"
+    }
+  }
+}

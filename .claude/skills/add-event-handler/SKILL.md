@@ -87,7 +87,7 @@ Tuân thủ `ai-rules/05-resilience.md` và `ai-rules/06-observability.md`.
 
 ## References
 
-- `ai-rules/02-cqrs-pattern.md` — event-driven flow, domain events vs integration events
-- `ai-rules/05-resilience.md` — Idempotent Consumer, retry chỉ cho transient error, DLQ
-- `ai-rules/06-observability.md` — structured logging, CorrelationId, tracing trong consumer
-- `ai-rules/08-efcore.md` — transaction boundary, không để transaction mở quá lâu
+- `ai-rules/02-cqrs-pattern.md`
+- `ai-rules/05-resilience.md`
+- `ai-rules/06-observability.md`
+- `ai-rules/08-efcore.md`

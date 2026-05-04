@@ -1,171 +1,311 @@
-# Architecture Core Backend — GovDocs
+# Architecture Core Backend — .NET Claude Foundation
 
-> **Dự án:** Hệ thống quản lý văn bản (GovDocs)
-> **Mục đích repository:** Tài liệu kiến trúc, quy tắc AI, skills scaffold code và solution mẫu cho core backend .NET 8
+> **Mục đích repository:** Foundation dùng chung cho các dự án .NET để phát triển với Claude Code.
+> Repository này tập trung vào: **technical rules**, **reusable skills**, **reusable commands**, **specialized agents**, **sample solution**, và **hướng dẫn áp dụng cho project mới**.
 
 ---
 
-## Cấu trúc thư mục
+## 1. Repository này dùng để làm gì?
 
-```
+Repository này đóng vai trò là **bộ nền dùng chung cho các dự án .NET** trong tương lai.
+
+Nó giúp chuẩn hóa 4 lớp:
+
+1. **Technical rules** — quy tắc kỹ thuật và kiến trúc mà AI và developer phải tuân thủ
+2. **Skills** — các tác vụ scaffold code lặp lại theo Clean Architecture
+3. **Commands** — các workflow ngắn gọn gọi bằng slash command
+4. **Agents** — các reviewer / specialist theo từng concern như architecture, security, EF Core, testing
+
+Ngoài ra repo còn có:
+- **GovDocs/** làm solution mẫu tham chiếu
+- **docs/** và **overviews/** làm tài liệu onboarding và architectural context
+
+---
+
+## 2. Cấu trúc thư mục và nhiệm vụ của từng phần
+
+```text
 architecture_core_backend/
-├── docs/                          # Tài liệu tổng quan trình bày
-├── overviews/                     # Tài liệu kiến trúc chi tiết
-├── ai-rules/                      # Quy tắc kỹ thuật cho AI
-├── .claude/skills/                # Skills scaffold code tự động
-├── GovDocs/                       # Solution mẫu .NET 8 Clean Architecture
-└── README.md                      # File này
+├── CLAUDE.md
+├── .mcp.json
+├── .claude/
+│   ├── settings.json
+│   ├── skills/
+│   ├── commands/
+│   └── agents/
+├── ai-rules/
+├── docs/
+│   ├── integration/
+│   └── usage/
+├── overviews/
+├── templates/
+├── GovDocs/
+└── README.md
 ```
 
----
+### `CLAUDE.md`
+File **quan trọng nhất** cho Claude Code trong repo này.
 
-## 1. Tài liệu tổng quan (`docs/`)
+Claude Code sẽ tự động đọc file này khi mở repo, nhờ đó hiểu:
+- repo này là foundation dùng chung cho .NET
+- `ai-rules/` là nguồn rule chuẩn duy nhất
+- khi nào nên dùng skills, commands, agents
+- cách áp dụng foundation này cho project mới
 
-Hai tài liệu này dùng để giới thiệu tổng quan dự án.
+### `.mcp.json`
+File cấu hình MCP dùng chung cho team.
 
-| Tài liệu | Mục đích |
-|---|---|
-| `docs/architecture-overview.md` | Tổng quan kiến trúc core backend .NET 8: Clean Architecture, CQRS, Event-Driven, Multi-tenancy |
-| `docs/ai-code-generation.md` | Quy trình sử dụng AI để gen code backend tự động theo 3 bước: Tiếp nhận đầu vào → Điều phối AI → Triển khai tự động |
+Hiện tại file này khai báo **Roslyn MCP** để Claude Code có thể làm việc tốt hơn với .NET solution:
+- semantic code navigation
+- type lookup
+- symbol resolution
+- giảm việc phải đọc toàn bộ file thủ công
 
-**Khi nào dùng:**
-- Trình bày định hướng kiến trúc
-- Onboarding cho thành viên mới vào dự án
-- Giải thích cách dự án áp dụng AI có kiểm soát
+### `.claude/settings.json`
+Cấu hình project-level cho Claude Code.
 
----
+Hiện tại file này dùng để:
+- xác định permissions mặc định
+- là nơi đúng để cấu hình hooks về sau nếu cần
 
-## 2. Tài liệu kiến trúc chi tiết (`overviews/`)
+### `.claude/skills/`
+Chứa các **skills tái sử dụng** để scaffold code theo pattern chuẩn.
 
-Sáu tài liệu này là **nền tảng quyết định kiến trúc** và **technical guardrails** cho toàn bộ dự án.
+Mỗi skill là một thư mục có `SKILL.md` riêng.
 
-| Tài liệu | Nội dung |
-|---|---|
-| `overviews/design_pattern_architecture.md` | Clean Architecture, Pragmatic DDD, CQRS, Event-Driven — cách tổ chức code backend |
-| `overviews/database_architecture.md` | Multi-tenancy, ltree cho cây tổ chức, partitioning cho bảng lớn |
-| `overviews/backend_core_technical_guidelines.md` | Security, validation pipeline, resilience, observability, testing, EF Core vận hành |
-| `overviews/distributed_system_design.md` | Phân tích Dapr, so sánh Docker Swarm vs Kubernetes, khuyến nghị triển khai |
-| `overviews/technology_comparison.md` | So sánh hệ thống cũ với kiến trúc mới về runtime, database, code architecture, giao tiếp service |
-| `overviews/old_system.md` | Tóm tắt hạn chế của hệ thống cũ, làm cơ sở cho đề xuất kiến trúc mới |
+Các skills hiện có:
+- `generate-command` — scaffold CQRS write use case
+- `generate-query` — scaffold CQRS read use case
+- `generate-domain-entity` — scaffold Aggregate Root / DDD entity
+- `add-event-handler` — scaffold MassTransit consumer / event handler
+- `setup-error-handling` — scaffold exception hierarchy + global exception handler
+- `setup-dependency-injection` — scaffold DI structure
+- `setup-configuration` — scaffold Options Pattern và appsettings structure
+- `setup-caching` — scaffold Redis caching / decorator pattern
+- `setup-background-job` — scaffold Outbox/Inbox + background jobs
 
-**Thứ tự nên đọc:**
+**Vai trò:**
+- phục vụ sinh code đúng convention
+- tái sử dụng giữa nhiều repo .NET
+- luôn tham chiếu trực tiếp `ai-rules/`
 
-1. `design_pattern_architecture.md` — Hiểu nguyên tắc thiết kế tổng thể
-2. `database_architecture.md` — Hiểu cách tổ chức dữ liệu
-3. `backend_core_technical_guidelines.md` — Hiểu các chuẩn kỹ thuật bắt buộc
-4. `distributed_system_design.md` — Hiểu chiến lược triển khai
-5. `technology_comparison.md` — Hiểu bối cảnh so sánh
-6. `old_system.md` — Hiểu lý do thay đổi
+### `.claude/commands/`
+Chứa các **slash commands** dùng lại được.
 
----
+Commands hiện có:
+- `/new-feature` — scaffold feature CQRS hoàn chỉnh
+- `/add-domain-entity` — thêm domain entity / aggregate
+- `/add-api-endpoint` — thêm API endpoint
+- `/review-clean-architecture` — review architecture compliance
+- `/write-unit-tests` — generate unit tests
+- `/write-integration-tests` — generate integration tests
 
-## 3. Quy tắc AI (`ai-rules/`)
+**Vai trò:**
+- biến các workflow lặp lại thành lệnh ngắn
+- giúp dev không phải viết prompt dài mỗi lần
+- chỉ mô tả workflow và rule cần đọc, không thay thế `ai-rules/`
 
-13 file quy tắc kỹ thuật bắt buộc mà AI phải tuân thủ khi sinh code. Mỗi file có cấu trúc **DO / DON'T / Ví dụ C#**.
+### `.claude/agents/`
+Chứa các **specialized agents** cho review và design.
 
-| File | Nội dung |
-|---|---|
-| `01-clean-architecture.md` | Dependency rule, scope DDD, phân tách layer Domain / Application / Infrastructure / API |
-| `02-cqrs-pattern.md` | Tách write (EF Core) và read (Dapper + SQL), cấu trúc Command/Query/Handler/Validator |
-| `03-security-tenancy.md` | Resolve TenantId từ token, ICurrentUser, ITenantContext, Global Query Filter, Policy auth |
-| `04-api-contract.md` | Versioning `/api/v1/`, ProblemDetails, phân trang chuẩn, HTTP status codes, Idempotency-Key |
-| `05-resilience.md` | Retry chỉ cho transient error, Idempotent Consumer, Dead Letter Queue, Circuit Breaker |
-| `06-observability.md` | Serilog structured logging, OpenTelemetry, health checks `/live` và `/ready`, audit log tách biệt |
-| `07-testing.md` | Unit test Domain, integration test PostgreSQL thật (Testcontainers), Architecture Test, Contract Test |
-| `08-efcore.md` | AsNoTracking cho read, migration theo bounded context, optimistic concurrency, transaction boundary |
-| `09-error-handling.md` | Exception hierarchy, Global Exception Handler, ProblemDetails, mapping exception → HTTP status |
-| `10-dependency-injection.md` | IServiceCollection extensions, service lifetimes, module registration, container validation |
-| `11-configuration.md` | Options Pattern, appsettings structure, secrets strategy, startup validation, feature flags |
-| `12-caching.md` | Redis distributed cache, cache-aside pattern, tenant-aware cache keys, invalidation, TTL |
-| `13-background-jobs.md` | Outbox/Inbox pattern, BackgroundService polling, Hangfire/Quartz scheduled jobs |
+Agents hiện có:
+- `clean-architecture-reviewer` — kiểm tra dependency rule và layer separation
+- `dotnet-backend-architect` — hỗ trợ thiết kế bounded context / backend architecture
+- `ef-core-reviewer` — review EF Core patterns và persistence concerns
+- `test-engineer` — review / thiết kế test strategy
+- `security-reviewer` — audit tenancy, authorization, secrets, security boundaries
 
-**Khi nào dùng:**
-- AI đọc các file này trước khi sinh code
-- Developer review code AI sinh ra có tuân thủ rules không
-- Onboarding để hiểu chuẩn kỹ thuật của dự án
+**Vai trò:**
+- phân vai reviewer theo concern
+- dùng khi cần review sâu một chủ đề cụ thể
+- không thay thế rules; chỉ dùng rules để review
 
----
+### `ai-rules/`
+Đây là **nguồn technical rules chuẩn duy nhất của repository**.
 
-## 4. Skills scaffold code (`.claude/skills/`)
+Tất cả skills, commands, agents và `CLAUDE.md` đều phải tham chiếu về đây.
 
-9 skills giúp AI tự động sinh code theo đúng convention của dự án. Mỗi skill có workflow chi tiết và tham chiếu đến `ai-rules/`.
+13 file rule hiện có:
+- `01-clean-architecture.md`
+- `02-cqrs-pattern.md`
+- `03-security-tenancy.md`
+- `04-api-contract.md`
+- `05-resilience.md`
+- `06-observability.md`
+- `07-testing.md`
+- `08-efcore.md`
+- `09-error-handling.md`
+- `10-dependency-injection.md`
+- `11-configuration.md`
+- `12-caching.md`
+- `13-background-jobs.md`
 
-| Skill | Lệnh gọi | Chức năng |
-|---|---|---|
-| `generate-command` | `/generate-command` | Sinh Command + CommandHandler + Validator + Controller action (write use case) |
-| `generate-query` | `/generate-query` | Sinh Query + Dapper Handler + DTO + GET action (read use case) |
-| `generate-domain-entity` | `/generate-domain-entity` | Sinh Aggregate Root + Value Objects + Domain Events + EF Config + Repository |
-| `add-event-handler` | `/add-event-handler` | Sinh MassTransit Consumer + Idempotency + ConsumerDefinition + DLQ |
-| `setup-error-handling` | `/setup-error-handling` | Sinh exception hierarchy + GlobalExceptionHandler + ProblemDetails mapping |
-| `setup-dependency-injection` | `/setup-dependency-injection` | Sinh DI extension methods + Program.cs structure + container validation |
-| `setup-configuration` | `/setup-configuration` | Sinh Options classes + appsettings structure + validation + secrets strategy |
-| `setup-caching` | `/setup-caching` | Sinh Redis connection + cached repository decorator + cache key helpers |
-| `setup-background-job` | `/setup-background-job` | Sinh Outbox table + processor BackgroundService + Hangfire setup |
+**Vai trò:**
+- single source of truth cho technical rules
+- chứa DO / DON'T / Examples đầy đủ
+- dùng cho cả Claude lẫn developer/reviewer
 
-**Cách dùng:**
-- Trong Claude Code CLI hoặc IDE extension, gõ `/generate-command` để gọi skill
-- AI sẽ tự động sinh toàn bộ file cần thiết theo đúng cấu trúc Clean Architecture
-- Sau khi sinh xong, AI tự chạy build, test và sửa lỗi cho đến khi pass
+### `docs/`
+Tài liệu bổ trợ cho việc sử dụng foundation.
 
----
+- `docs/integration/` — ghi lại các quyết định tích hợp foundation
+- `docs/usage/` — hướng dẫn dùng foundation này cho project mới
+- `docs/architecture-overview.md` — tổng quan kiến trúc
+- `docs/ai-code-generation.md` — mô tả cách dự án dùng AI để sinh code
 
-## 5. Solution mẫu (`GovDocs/`)
+### `overviews/`
+Tài liệu kiến trúc chi tiết và reasoning nền.
 
-Solution .NET 8 mẫu theo đúng kiến trúc Clean Architecture + CQRS + Event-Driven đã được định nghĩa trong tài liệu.
+Đây là nơi chứa các tài liệu dạng “vì sao thiết kế như vậy”, dùng cho:
+- tech lead
+- architect
+- onboarding
+- review các quyết định kiến trúc lớn
 
-```
-GovDocs/
-├── src/
-│   ├── GovDocs.Domain              # Aggregate Roots, Value Objects, Domain Events
-│   ├── GovDocs.Application         # Commands, Queries, Handlers, Validators
-│   ├── GovDocs.Infrastructure      # EF Core, Dapper, Redis, MassTransit, Background Jobs
-│   └── GovDocs.Api                 # Controllers, Middleware, Swagger, Health Checks
-├── tests/
-│   ├── GovDocs.UnitTests           # Unit tests cho Domain và Application
-│   └── GovDocs.IntegrationTests    # Integration tests với Testcontainers
-├── .github/workflows/              # CI/CD pipelines
-├── .claude/skills/                 # Skills riêng cho solution này (nếu có)
-├── docker-compose.yml              # PostgreSQL, Redis, RabbitMQ local
-├── Dockerfile                      # Container image cho API
-└── GovDocs.sln                     # Solution file
-```
+### `templates/`
+Hiện tại thư mục này để dành cho **project scaffolding templates** ở cấp solution/repository nếu về sau cần trích template từ `GovDocs/`.
 
-**Mục đích:**
-- Làm template để khởi tạo bounded context mới
-- Làm tài liệu tham khảo khi viết code thủ công
-- Làm cơ sở để AI học convention của dự án
+**Lưu ý:** Claude Code không tự động đọc thư mục này.
+Nó là thư mục dành cho con người / template repo strategy, không phải runtime folder của Claude.
 
----
+### `GovDocs/`
+Solution mẫu .NET 8 Clean Architecture.
 
-## Hướng dẫn sử dụng
-
-### Cho người mới tham gia dự án
-
-1. Đọc `docs/architecture-overview.md` để hiểu bức tranh tổng thể
-2. Đọc `docs/ai-code-generation.md` để hiểu cách dự án dùng AI
-3. Đọc `overviews/design_pattern_architecture.md` để hiểu nguyên tắc thiết kế
-4. Đọc `overviews/backend_core_technical_guidelines.md` để hiểu chuẩn kỹ thuật
-5. Xem solution mẫu `GovDocs/` để hiểu cấu trúc code thực tế
-6. Thử dùng skills trong `.claude/skills/` để sinh code mẫu
-
-### Cho kiến trúc sư / tech lead
-
-1. Đọc toàn bộ `overviews/` để nắm quyết định kiến trúc
-2. Review và cập nhật `ai-rules/` khi có thay đổi chuẩn kỹ thuật
-3. Cập nhật skills trong `.claude/skills/` khi có pattern mới
-4. Duy trì solution mẫu `GovDocs/` để phản ánh best practices mới nhất
-
-### Cho developer
-
-1. Đọc `docs/ai-code-generation.md` để hiểu workflow dùng AI
-2. Đọc `ai-rules/` liên quan đến tác vụ đang làm
-3. Dùng skills để sinh code, sau đó review và chỉnh sửa theo nghiệp vụ cụ thể
-4. Chạy test và đảm bảo tuân thủ architecture tests
+**Vai trò:**
+- reference implementation
+- ví dụ thực tế để đối chiếu khi viết rules/skills
+- không phải rule source chính
 
 ---
 
-## Liên hệ và đóng góp
+## 3. Cách Claude Code hiểu repo này
 
-- Nếu phát hiện lỗi trong tài liệu hoặc skills, tạo issue trong repository
-- Nếu muốn đề xuất thay đổi kiến trúc, tạo pull request với ADR (Architecture Decision Record)
-- Nếu muốn thêm skill mới, tham khảo cấu trúc skills hiện có trong `.claude/skills/`
+Claude Code **tự động đọc**:
+- `CLAUDE.md`
+- `.claude/settings.json`
+- `.mcp.json`
+- `.claude/skills/`
+- `.claude/commands/`
+- `.claude/agents/`
+
+Claude Code **không tự động đọc** chỉ vì tên thư mục:
+- `ai-rules/`
+- `docs/`
+- `overviews/`
+- `templates/`
+
+Vì vậy:
+- `CLAUDE.md` phải chỉ rõ rằng `ai-rules/` là nguồn chuẩn
+- skills/commands/agents phải tham chiếu trực tiếp `ai-rules/`
+
+---
+
+## 4. Cách dùng foundation này cho một project .NET mới
+
+Xem đầy đủ tại:
+- `docs/usage/how-to-use-in-new-dotnet-project.md`
+- `docs/usage/when-to-use-skill-command-agent.md`
+
+Tóm tắt:
+
+1. Copy các file/thư mục sau vào project mới:
+   - `CLAUDE.md`
+   - `.claude/settings.json`
+   - `.claude/skills/`
+   - `.claude/commands/`
+   - `.claude/agents/`
+   - `.mcp.json`
+2. Nên copy thêm `ai-rules/` để giữ full technical rules
+3. Cài Roslyn MCP:
+   ```bash
+   dotnet tool install --global Microsoft.MCP.Server.Roslyn
+   ```
+4. Dùng các commands / skills / agents trong project mới
+
+---
+
+## 5. Quy tắc tổ chức cần duy trì
+
+### Giữ nguyên nguyên tắc sau
+- `ai-rules/` là **nguồn rule chuẩn duy nhất**
+- skills / commands / agents **không copy full rule** từ `ai-rules/`
+- skills / commands / agents chỉ nên:
+  - nói khi nào dùng
+  - workflow ngắn gọn
+  - file rule cần đọc
+  - output mong muốn
+- nếu pattern chỉ hữu ích cho GovDocs thì giữ trong `GovDocs/`
+- nếu pattern dùng chung được cho nhiều dự án .NET thì promote vào foundation
+
+### Không nên làm
+- tạo thêm thư mục `rules/` khác song song với `ai-rules/`
+- nhét full technical rules vào commands hoặc agents
+- coi `GovDocs/` là rule source thay cho `ai-rules/`
+
+---
+
+## 6. Khi nào sửa phần nào?
+
+### Sửa `ai-rules/` khi:
+- thay đổi technical standards
+- thêm một concern kiến trúc mới
+- cần cập nhật DO / DON'T / examples
+
+### Sửa `.claude/skills/` khi:
+- có pattern scaffold mới cần tái sử dụng
+- workflow generate code thay đổi
+- muốn AI sinh code đúng hơn cho một use case cụ thể
+
+### Sửa `.claude/commands/` khi:
+- có workflow lặp lại mới cần gọi bằng slash command
+- muốn rút ngắn prompt cho dev
+
+### Sửa `.claude/agents/` khi:
+- cần thêm reviewer/specialist mới
+- muốn tách review theo concern sâu hơn
+
+### Sửa `CLAUDE.md` khi:
+- thay đổi cách Claude nên hiểu repo
+- thay đổi bootstrap strategy cho project mới
+- thay đổi priority giữa rules / skills / commands / agents
+
+---
+
+## 7. Hướng dẫn đọc repo cho từng vai trò
+
+### Developer mới
+1. Đọc `README.md`
+2. Đọc `CLAUDE.md`
+3. Đọc `docs/architecture-overview.md`
+4. Đọc `ai-rules/` liên quan đến task đang làm
+5. Thử dùng commands / skills
+6. Xem `GovDocs/` để tham chiếu code thực tế
+
+### Tech Lead / Architect
+1. Đọc `README.md`
+2. Đọc `CLAUDE.md`
+3. Đọc toàn bộ `overviews/`
+4. Review `ai-rules/`
+5. Review chất lượng của skills / commands / agents
+6. Quyết định pattern nào đủ generic để promote vào foundation
+
+### Khi review AI-generated code
+1. Xác định task đó dùng skill / command / agent nào
+2. Đối chiếu với `ai-rules/`
+3. Kiểm tra code thực tế trong `GovDocs/` hoặc project đích
+4. Chỉ promote lại vào foundation khi pattern đủ generic
+
+---
+
+## 8. Trạng thái hiện tại của foundation
+
+Hiện tại foundation này đã có:
+- 13 technical rules trong `ai-rules/`
+- 9 reusable skills trong `.claude/skills/`
+- 6 reusable commands trong `.claude/commands/`
+- 5 specialized agents trong `.claude/agents/`
+- `CLAUDE.md` chuẩn hóa để Claude hiểu repo đúng cách
+- `.mcp.json` để hỗ trợ Roslyn MCP
+- `GovDocs/` làm solution mẫu tham chiếu
+
+Đây là bộ khung phù hợp để tiếp tục phát triển dùng chung cho các dự án .NET về sau.

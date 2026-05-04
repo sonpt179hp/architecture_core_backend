@@ -123,7 +123,7 @@ Dùng Decorator Pattern để bọc repository — không nhét cache logic vào
 
 ## References
 
-- `ai-rules/12-caching.md` — Cache-aside pattern, TTL strategy, TenantId prefix, invalidation
+- `ai-rules/12-caching.md` — Redis, cache-aside, invalidation, decorator pattern
 - `ai-rules/03-security-tenancy.md` — TenantId bắt buộc trong cache key
 - `ai-rules/10-dependency-injection.md` — Decorator registration với Scrutor
-- `ai-rules/06-observability.md` — Log warning khi Redis unavailable, không log Error
+- `ai-rules/06-observability.md` — logging and operational concerns

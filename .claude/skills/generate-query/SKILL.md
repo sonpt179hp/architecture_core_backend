@@ -79,7 +79,7 @@ Tham chiếu `ai-rules/02-cqrs-pattern.md` §DO #3 và §DON'T #1/#3.
 
 ## References
 
-- `ai-rules/02-cqrs-pattern.md` — read path dùng Dapper, không dùng EF cho read phức tạp
-- `ai-rules/03-security-tenancy.md` — TenantId bắt buộc trong mọi SQL query
-- `ai-rules/04-api-contract.md` — phân trang chuẩn, ProblemDetails 404, HTTP status codes
-- `ai-rules/06-observability.md` — structured logging trong handler
+- `ai-rules/02-cqrs-pattern.md`
+- `ai-rules/03-security-tenancy.md`
+- `ai-rules/04-api-contract.md`
+- `ai-rules/06-observability.md`

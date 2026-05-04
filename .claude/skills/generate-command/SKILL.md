@@ -70,8 +70,8 @@ Scaffold đầy đủ bộ file cho một write use case mới theo đúng CQRS 
 
 ## References
 
-- `ai-rules/01-clean-architecture.md` — dependency rule, Infrastructure tách biệt Domain
-- `ai-rules/02-cqrs-pattern.md` — CQRS write path, validator không chứa business rule
-- `ai-rules/03-security-tenancy.md` — ITenantContext, Policy-based authorization
+- `ai-rules/01-clean-architecture.md` — dependency rule, layer separation
+- `ai-rules/02-cqrs-pattern.md` — CQRS write path, validator responsibilities
+- `ai-rules/03-security-tenancy.md` — ITenantContext, policy-based authorization
 - `ai-rules/04-api-contract.md` — HTTP status codes, Idempotency-Key, ProblemDetails
-- `ai-rules/08-efcore.md` — transaction boundary, không auto-migrate
+- `ai-rules/08-efcore.md` — transaction boundary, persistence concerns

@@ -107,7 +107,7 @@ Không để mỗi controller tự try/catch riêng.
 
 ## References
 
-- `ai-rules/09-error-handling.md` — Exception hierarchy, mapping rules, logging context
-- `ai-rules/04-api-contract.md` — ProblemDetails format chuẩn
-- `ai-rules/06-observability.md` — Logging structured, không log OperationCanceled như Error
-- `ai-rules/10-dependency-injection.md` — Đăng ký handler qua DI
+- `ai-rules/09-error-handling.md`
+- `ai-rules/04-api-contract.md`
+- `ai-rules/06-observability.md`
+- `ai-rules/10-dependency-injection.md`
