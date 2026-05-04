@@ -1,109 +1,233 @@
----
-name: setup-error-handling
-description: >
-  Scaffold the complete error handling infrastructure: custom exception hierarchy,
-  global exception handler (IExceptionHandler), ProblemDetails factory, and
-  exception-to-HTTP status mapping. Use once per bounded context or at solution level.
-allowed-tools:
-  - Read(**/*.cs)
-  - Read(**/ai-rules/*.md)
-  - Glob(src/**/*.cs)
-  - Glob(src/**/*.csproj)
-  - Edit(**/*.cs)
----
-
 # Skill: Setup Error Handling Infrastructure
 
 ## Purpose
 
-Dựng đầy đủ hạ tầng xử lý lỗi nhất quán cho toàn solution: exception hierarchy theo layer,
-global handler trả `ProblemDetails`, mapping exception → HTTP status code chuẩn.
-Không để mỗi controller tự try/catch riêng.
+Dựng hạ tầng xử lý lỗi nhất quán: Error pattern (Result/Error/ErrorType),
+GlobalExceptionHandler (IExceptionHandler), ProblemDetails factory, và mapping Error → HTTP status.
+
+## Architecture: Error-First, Không Exception-Driven
+
+Dự án dùng **Result pattern** làm primary error handling mechanism:
+
+```
+✅ Command Handler → return Result<T>.Failure(error)
+✅ Query Handler → return Error.NotFound(...)
+✅ Validator (FluentValidation) → ValidationBehavior trả Error.Validation(...)
+✅ Domain Entity Factory → return Result<T>.Failure(domainError)
+```
+
+**GlobalExceptionHandler chỉ catch:**
+- Unhandled exceptions (bugs, null refs)
+- External service failures (DB down, Redis down)
+- **KHÔNG** catch Result failures — chúng được handle ở Controller qua `result.ToActionResult()`
+
+## Convention Mapping
+
+| Artifact | Convention | Pattern |
+|---|---|---|
+| **Error Pattern** | `Result` + `Result<T>` + `Error` + `ErrorType` | Railway-oriented |
+| **Error Type** | `enum ErrorType { Failure, Validation, NotFound, Conflict, Unauthorized }` | |
+| **Error Factory** | `Error.{Type}(code, description)` | Static factory methods |
+| **GlobalExceptionHandler** | Implement `IExceptionHandler` (.NET 8+) | |
+| **Result Extensions** | `Result<T>.ToActionResult()` + `Error.ToActionResult()` | |
+| **HTTP Mapping** | NotFound→404, Validation→400, Conflict→409, Unauthorized→401, Failure→500 | |
+
+## Project Structure
+
+```
+src/
+├── Domain/
+│   └── Common/
+│       ├── Result.cs       ← Result base class
+│       ├── ResultT.cs      ← Result<T>
+│       ├── Error.cs        ← Error record struct
+│       └── ErrorType.cs    ← ErrorType enum
+└── Api/
+    ├── Middleware/
+    │   └── GlobalExceptionHandler.cs
+    ├── Extensions/
+    │   └── ResultExtensions.cs
+    └── Controllers/
+        └── ApiController.cs
+```
 
 ## Instructions
 
-**Input:** Tên solution hoặc bounded context muốn setup (ví dụ: `Documents`).
+**Input:** Tên bounded context.
 
-1. **Đọc cấu trúc project hiện tại** để xác định đường dẫn đúng:
-   - `Domain/Exceptions/` — DomainException
-   - `Application/Exceptions/` — NotFoundException, ConflictException
-   - `Infrastructure/Exceptions/` — InfrastructureException
-   - `Api/Middleware/` hoặc `Api/Infrastructure/` — GlobalExceptionHandler
+### Step 1: Review Existing Error Pattern
 
-2. **Tạo base exception classes:**
+Kiểm tra các file đã tồn tại:
 
-   `Domain/Exceptions/DomainException.cs`:
-   ```csharp
-   public abstract class DomainException : Exception
-   {
-       protected DomainException(string message) : base(message) { }
-       protected DomainException(string message, Exception inner) : base(message, inner) { }
-   }
-   ```
+```
+- Domain/Common/Result.cs       ← Result base class
+- Domain/Common/ResultT.cs      ← Result<T>
+- Domain/Common/Error.cs        ← Error record struct
+- Domain/Common/ErrorType.cs   ← ErrorType enum
+```
 
-   `Application/Exceptions/NotFoundException.cs`:
-   ```csharp
-   public class NotFoundException : Exception
-   {
-       public NotFoundException(string entityName, object id)
-           : base($"{entityName} with id '{id}' was not found.") { }
-   }
-   ```
+### Step 2: Create GlobalExceptionHandler
 
-   `Application/Exceptions/ConflictException.cs`:
-   ```csharp
-   public class ConflictException : Exception
-   {
-       public ConflictException(string message) : base(message) { }
-       public ConflictException(string message, Exception inner) : base(message, inner) { }
-   }
-   ```
+`src/{Solution}/Api/Middleware/GlobalExceptionHandler.cs`:
 
-   `Infrastructure/Exceptions/InfrastructureException.cs`:
-   ```csharp
-   public class InfrastructureException : Exception
-   {
-       public InfrastructureException(string message, Exception inner) : base(message, inner) { }
-   }
-   ```
+```csharp
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 
-3. **Tạo Global Exception Handler** tại `Api/Infrastructure/GlobalExceptionHandler.cs`:
-   - Implement `IExceptionHandler` (.NET 8)
-   - Map exception types → HTTP status codes theo bảng trong `ai-rules/09-error-handling.md`
-   - Log với full context (TraceId, Method, Path, ExceptionType)
-   - Không expose stack trace ở production
-   - Handle `OperationCanceledException` riêng (return false, không log Error)
-   - Handle `ValidationException` (FluentValidation) → 422 với field errors
+namespace {Namespace}.Api.Middleware;
 
-4. **Đăng ký trong Program.cs hoặc extension method:**
-   ```csharp
-   builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-   builder.Services.AddProblemDetails();
-   // ...
-   app.UseExceptionHandler();
-   ```
+internal sealed class GlobalExceptionHandler(
+    ILogger<GlobalExceptionHandler> logger,
+    IHostEnvironment environment) : IExceptionHandler
+{
+    public async ValueTask<bool> TryHandleAsync(
+        HttpContext httpContext,
+        Exception exception,
+        CancellationToken cancellationToken)
+    {
+        logger.LogError(exception, "Unhandled exception occurred");
 
-5. **Tạo 1-2 ví dụ DomainException cụ thể** phù hợp với bounded context:
-   ```csharp
-   // Ví dụ cho Documents context
-   public class DocumentAlreadyPublishedException : DomainException
-   {
-       public DocumentAlreadyPublishedException(Guid documentId)
-           : base($"Document '{documentId}' is already published.") { }
-   }
-   ```
+        var problemDetails = new ProblemDetails
+        {
+            Status = StatusCodes.Status500InternalServerError,
+            Title = "Internal Server Error",
+            Type = "https://httpstatuses.com/500"
+        };
 
-6. **Kiểm tra lại:**
-   - `GlobalExceptionHandler` đã đăng ký trước middleware khác trong pipeline chưa
-   - `OperationCanceledException` không bị log như Error
-   - Stack trace không hiển thị ở production (kiểm tra `IHostEnvironment`)
-   - `ValidationException` của FluentValidation map sang 422 với danh sách lỗi theo field
+        if (environment.IsDevelopment())
+        {
+            problemDetails.Detail = exception.Message;
+        }
+
+        httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
+
+        return true;
+    }
+}
+```
+
+### Step 3: Create ResultExtensions
+
+`src/{Solution}/Api/Extensions/ResultExtensions.cs`:
+
+```csharp
+using {Namespace}.Domain.Common;
+using Microsoft.AspNetCore.Mvc;
+
+namespace {Namespace}.Api.Extensions;
+
+public static class ResultExtensions
+{
+    public static IActionResult ToActionResult<T>(this Result<T> result)
+    {
+        if (result.IsSuccess)
+        {
+            return new OkObjectResult(result.Value);
+        }
+
+        return MapErrorToActionResult(result.Error);
+    }
+
+    public static IActionResult ToActionResult(this Error error) =>
+        MapErrorToActionResult(error);
+
+    private static IActionResult MapErrorToActionResult(Error error)
+    {
+        return error.Type switch
+        {
+            ErrorType.NotFound => new NotFoundObjectResult(
+                CreateProblemDetails(error, StatusCodes.Status404NotFound, "Not Found")),
+
+            ErrorType.Validation => new BadRequestObjectResult(
+                CreateValidationProblemDetails(error)),
+
+            ErrorType.Conflict => new ConflictObjectResult(
+                CreateProblemDetails(error, StatusCodes.Status409Conflict, "Conflict")),
+
+            ErrorType.Unauthorized => new UnauthorizedObjectResult(
+                CreateProblemDetails(error, StatusCodes.Status401Unauthorized, "Unauthorized")),
+
+            _ => new ObjectResult(
+                CreateProblemDetails(error, StatusCodes.Status500InternalServerError, "Internal Server Error"))
+            {
+                StatusCode = StatusCodes.Status500InternalServerError
+            }
+        };
+    }
+
+    private static ProblemDetails CreateProblemDetails(Error error, int status, string title) =>
+        new()
+        {
+            Status = status,
+            Title = title,
+            Type = $"https://httpstatuses.com/{status}",
+            Extensions = { ["errorCode"] = error.Code, ["errorDescription"] = error.Description }
+        };
+
+    private static ValidationProblemDetails CreateValidationProblemDetails(Error error) =>
+        new(new Dictionary<string, string[]>
+        {
+            { error.Code, new[] { error.Description } }
+        })
+        {
+            Status = StatusCodes.Status400BadRequest,
+            Title = "Validation Failed",
+            Type = "https://httpstatuses.com/400"
+        };
+}
+```
+
+### Step 4: Create ApiController Base
+
+`src/{Solution}/Api/Controllers/ApiController.cs`:
+
+```csharp
+using Mediator;
+using Microsoft.AspNetCore.Mvc;
+
+namespace {Namespace}.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public abstract class ApiController(ISender sender) : ControllerBase
+{
+    protected ISender Sender { get; } = sender;
+}
+```
+
+### Step 5: Register in Program.cs
+
+```csharp
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
+app.UseExceptionHandler(); // Đặt ĐẦU TIÊN trong middleware pipeline
+```
+
+## HTTP Status Code Mapping
+
+| ErrorType | HTTP Status | ProblemDetails Type |
+|---|---|---|
+| `NotFound` | 404 | Not Found |
+| `Validation` | 400 | Bad Request (ValidationProblemDetails) |
+| `Conflict` | 409 | Conflict |
+| `Unauthorized` | 401 | Unauthorized |
+| `Failure` | 500 | Internal Server Error |
+
+## Checklist
+
+- [ ] `GlobalExceptionHandler` implement `IExceptionHandler`, log exception, trả ProblemDetails
+- [ ] `ResultExtensions` map `Error.Type` → đúng HTTP status code
+- [ ] Controller dùng `result.ToActionResult()` hoặc `result.Match(onSuccess, error => error.ToActionResult())`
+- [ ] Validation failures trả 400 Bad Request với field-level errors
+- [ ] Chỉ expose exception message ở Development environment
 
 ## Edge Cases
 
-- Nếu `IExceptionHandler` chưa có (< .NET 8): dùng `UseMiddleware<GlobalExceptionMiddleware>()` thay thế.
-- Nếu cần custom mapping cho exception bên thứ ba (Stripe, Twilio...): thêm case vào switch expression trong handler.
-- Nếu có nhiều bounded context: base exception classes (DomainException, NotFoundException) nên đặt ở shared project, không nhân bản.
+- Custom exception mapping (Stripe, Twilio...): thêm case trong GlobalExceptionHandler.
+- .NET 7 (không có IExceptionHandler): dùng `UseMiddleware<GlobalExceptionMiddleware>()`.
+- Correlation ID: thêm vào ProblemDetails Extensions.
 
 ## References
 

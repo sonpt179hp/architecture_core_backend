@@ -1,81 +1,243 @@
----
-name: generate-domain-entity
-description: >
-  Scaffold a complete DDD Aggregate Root: Value Objects, Domain Events,
-  EF Core Fluent Configuration, Repository interface, and repository implementation.
-  Use when the user asks to model a new core domain concept (not CRUD/master data).
-allowed-tools:
-  - Read(**/*.cs)
-  - Read(**/ai-rules/*.md)
-  - Glob(src/**/*.cs)
-  - Glob(src/**/*.csproj)
-  - Edit(**/*.cs)
----
-
 # Skill: Generate Domain Entity (Aggregate Root)
 
 ## Purpose
 
 Scaffold đầy đủ mô hình DDD cho một Aggregate Root mới theo Clean Architecture.
 Domain layer phải hoàn toàn không phụ thuộc framework (không EF annotations, không MassTransit imports).
-Áp dụng cho core services như Document, OfficeManagement; **không áp dụng** cho CRUD master-data đơn giản.
+
+Áp dụng cho core services có invariants, lifecycle, behaviors; **không áp dụng** cho CRUD master-data đơn giản.
+
+## Convention Mapping
+
+| Artifact | Convention | Pattern |
+|---|---|---|
+| **Entity base** | `Entity<TId> where TId : notnull` | Base class có `RaiseDomainEvent()` |
+| **Aggregate base** | `AggregateRoot<TId>` | Kế thừa Entity, đánh dấu aggregate boundary |
+| **ID** | `readonly record struct {Name}Id(Guid Value)` | Immutable, factory `New()` |
+| **Value Objects** | `readonly record struct` hoặc `record` | Immutable, validation trong factory |
+| **Domain Events** | Interface `IDomainEvent` (marker) | Raise qua `RaiseDomainEvent()` trong Entity |
+| **Result Pattern** | `Result` + `Result<T>` + `Error` + `ErrorType` | Railway-oriented |
+| **Errors** | Static class `{Entity}Errors` | Predefined `Error` constants |
+| **Factory method** | `static Result<T> Create(...)` | Validate invariants, trả `Result<T>` |
+| **EF Core config** | `IEntityTypeConfiguration<T>` | Fluent API, snake_case column names |
+
+## Project Structure
+
+```
+src/
+├── Domain/
+│   ├── Primitives/
+│   │   ├── Entity.cs              ← TId base class + domain events
+│   │   ├── AggregateRoot.cs      ← Aggregate boundary marker
+│   │   └── IDomainEvent.cs       ← Domain event marker
+│   ├── Common/
+│   │   ├── Result.cs             ← Result base class
+│   │   ├── ResultT.cs            ← Result<T> generic
+│   │   ├── Error.cs             ← Error record struct
+│   │   └── ErrorType.cs          ← Failure|Validation|NotFound|Conflict|Unauthorized
+│   └── {Feature}/
+│       ├── {Entity}Id.cs         ← ID value type
+│       ├── {Entity}.cs          ← Aggregate Root
+│       ├── ValueObjects/         ← Value objects
+│       ├── Events/               ← Domain events
+│       └── Errors/               ← Predefined errors
+└── Infrastructure/
+    └── Persistence/
+        └── Configurations/
+            └── {Entity}Configuration.cs
+```
 
 ## Instructions
 
-**Input cần từ user:** Tên aggregate (ví dụ: `Document`), bounded context, danh sách properties chính, danh sách behaviors nghiệp vụ cần model (`Publish`, `Approve`, `Archive`, v.v.).
+**Input cần từ user:** Tên aggregate, bounded context, properties, behaviors nghiệp vụ.
 
-1. **Xác định loại entity trước khi scaffold:**
-   - Nếu là core business concept có invariants, lifecycle, behaviors → dùng Aggregate Root.
-   - Nếu là master data/setting đơn giản → dừng và nhắc user dùng CRUD entity nhẹ hơn, không dùng skill này.
+### Step 1: Validate Entity Type
 
-2. **Tạo Value Objects** tại `src/{BoundedContext}/Domain/ValueObjects/`:
-   - Mỗi primitive quan trọng được wrap thành Value Object có validation riêng (`DocumentTitle`, `DocumentNumber`, `TenantId`).
-   - Kế thừa `ValueObject` base class, override `GetEqualityComponents()`.
-   - Dùng `static Create(...)` factory method thay vì public constructor.
-   - `Create()` phải throw `DomainException` nếu input không hợp lệ.
+- Core business concept có invariants, lifecycle, behaviors → Aggregate Root.
+- Master data/setting đơn giản → CRUD entity nhẹ hơn, không dùng skill này.
 
-3. **Tạo Domain Events** tại `src/{BoundedContext}/Domain/Events/`:
-   - Mỗi behavior nghiệp vụ quan trọng sinh 1 event: `{Aggregate}{Action}Event`
-   - Ví dụ: `DocumentCreatedEvent`, `DocumentPublishedEvent`
-   - Implement `IDomainEvent`
-   - Chỉ chứa snapshot data tại thời điểm event — không chứa method hoặc dependencies
+### Step 2: Create ID Value Type
 
-4. **Tạo Aggregate Root** tại `src/{BoundedContext}/Domain/Aggregates/{Aggregate}.cs`:
-   - Kế thừa `AggregateRoot` base class
-   - Private constructor + `static Create(...)` factory
-   - Mọi property có `private set`
-   - Các method hành vi (`Publish()`, `Approve()`, v.v.) gọi `AddDomainEvent(new ...Event(...))`
-   - Implement `ITenantEntity` nếu là multi-tenant
-   - Thêm RowVersion/concurrency token property hoặc shadow property
+`src/{Solution}/{Domain}/{Feature}/{Entity}Id.cs`:
 
-5. **Tạo Repository Interface** tại `src/{BoundedContext}/Application/Interfaces/I{Aggregate}Repository.cs`:
-   - Chỉ expose các method cần thiết: `GetByIdAsync`, `AddAsync`, `Update`, `Delete`
-   - **KHÔNG** expose `IQueryable` hay `GetAllAsync` không filter
+```csharp
+namespace {Namespace}.{Feature};
 
-6. **Tạo EF Core Configuration** tại `src/{BoundedContext}/Infrastructure/Persistence/Configurations/{Aggregate}Configuration.cs`:
-   - Implement `IEntityTypeConfiguration<{Aggregate}>`
-   - Map Value Objects bằng `.HasConversion()`
-   - Đặt `HasQueryFilter()` cho `TenantId` nếu multi-tenant
-   - Đặt concurrency token: `IsRowVersion()` với `xmin` (PostgreSQL)
-   - Tất cả column names theo `snake_case`
+public readonly record struct {Entity}Id(Guid Value)
+{
+    public static {Entity}Id New() => new(Guid.NewGuid());
+}
+```
 
-7. **Tạo Repository implementation** tại `src/{BoundedContext}/Infrastructure/Persistence/Repositories/{Aggregate}Repository.cs`:
-   - Dùng DbContext tương ứng
-   - Tuân thủ interface đã định nghĩa ở Application
-   - Không để query read phức tạp trong repository này
+### Step 3: Create Domain Errors
 
-8. **Kiểm tra lại trước khi hoàn thành:**
-   - Domain layer không import bất cứ thứ gì từ Infrastructure, EF Core, Dapper, MassTransit
-   - Tất cả mutable operations đi qua method, không set property trực tiếp từ bên ngoài
-   - Factory method validate invariants trước khi tạo entity
-   - Nếu multi-tenant: aggregate có `TenantId`, config có Global Query Filter
+`src/{Solution}/{Domain}/{Feature}/Errors/{Entity}Errors.cs`:
+
+```csharp
+using {Namespace}.Domain.Common;
+
+namespace {Namespace}.{Feature}.Errors;
+
+public static class {Entity}Errors
+{
+    public static readonly Error NotFound = Error.NotFound(
+        "{Entity}.NotFound",
+        "The {entity} with the specified identifier was not found.");
+
+    public static readonly Error NameEmpty = Error.Validation(
+        "{Entity}.NameEmpty",
+        "The {entity} name cannot be empty.");
+
+    public static readonly Error InvalidState = Error.Failure(
+        "{Entity}.InvalidState",
+        "The {entity} is in an invalid state for this operation.");
+}
+```
+
+### Step 4: Create Aggregate Root
+
+`src/{Solution}/{Domain}/{Feature}/{Entity}.cs`:
+
+```csharp
+using {Namespace}.Domain.Common;
+using {Namespace}.Domain.Primitives;
+using {Namespace}.{Feature}.Errors;
+
+namespace {Namespace}.{Feature};
+
+public sealed class {Entity} : AggregateRoot<{Entity}Id>
+{
+    private {Entity}(
+        {Entity}Id id,
+        string name,
+        DateTime createdAt) : base(id)
+    {
+        Name = name;
+        CreatedAt = createdAt;
+    }
+
+    // Required by EF Core
+    private {Entity}()
+    {
+    }
+
+    public string Name { get; private set; } = string.Empty;
+    public DateTime CreatedAt { get; private set; }
+    public DateTime? UpdatedAt { get; private set; }
+
+    public static Result<{Entity}> Create(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return {Entity}Errors.NameEmpty;
+        }
+
+        var entity = new {Entity}({Entity}Id.New(), name, DateTime.UtcNow);
+        return Result<{Entity}>.Success(entity);
+    }
+
+    public Result Update(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return {Entity}Errors.NameEmpty;
+        }
+
+        Name = name;
+        return Result.Success();
+    }
+
+    // Thêm domain behaviors (Publish, Approve, Archive...) theo yêu cầu
+    // Mỗi behavior gọi RaiseDomainEvent(new {Entity}{Action}Event(...))
+}
+```
+
+### Step 5: Create Domain Events (nếu có behaviors)
+
+`src/{Solution}/{Domain}/{Feature}/Events/{Entity}{Action}Event.cs`:
+
+```csharp
+using {Namespace}.Domain.Primitives;
+
+namespace {Namespace}.{Feature}.Events;
+
+public sealed class {Entity}{Action}Event : IDomainEvent
+{
+    public {Entity}{Action}Event({Entity}Id {entity}Id, string name)
+    {
+        {Entity}Id = {entity}Id;
+        Name = name;
+        OccurredAt = DateTime.UtcNow;
+    }
+
+    public {Entity}Id {Entity}Id { get; }
+    public string Name { get; }
+    public DateTime OccurredAt { get; }
+}
+```
+
+### Step 6: Create EF Core Configuration
+
+`src/{Solution}/{Infrastructure}/Persistence/Configurations/{Entity}Configuration.cs`:
+
+```csharp
+using {Namespace}.{Feature};
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace {Namespace}.Infrastructure.Persistence.Configurations;
+
+internal sealed class {Entity}Configuration : IEntityTypeConfiguration<{Entity}>
+{
+    public void Configure(EntityTypeBuilder<{Entity}> builder)
+    {
+        builder.ToTable("{entity_names}"); // snake_case: products, documents
+
+        builder.HasKey(e => e.Id);
+
+        builder.Property(e => e.Id)
+            .HasConversion(id => id.Value, value => new {Entity}Id(value))
+            .HasColumnName("id");
+
+        builder.Property(e => e.Name)
+            .HasMaxLength(200)
+            .IsRequired()
+            .HasColumnName("name");
+
+        builder.Property(e => e.CreatedAt)
+            .HasColumnName("created_at");
+
+        builder.Property(e => e.UpdatedAt)
+            .HasColumnName("updated_at");
+    }
+}
+```
+
+### Step 7: Add DbSet to ApplicationDbContext
+
+```csharp
+// IApplicationDbContext
+DbSet<{Entity}> {Entities} { get; }
+
+// ApplicationDbContext
+public DbSet<{Entity}> {Entities} => Set<{Entity}>();
+```
+
+## Checklist
+
+- [ ] Domain layer không import EF Core, Dapper, MassTransit
+- [ ] Tất cả mutable operations đi qua method, không set property trực tiếp
+- [ ] Factory method validate invariants, trả `Result<T>`
+- [ ] Domain Events được raise qua `RaiseDomainEvent()`
+- [ ] EF Core config dùng snake_case column names
+- [ ] Unit tests cover happy path và error cases
 
 ## Edge Cases
 
-- Nếu aggregate có child entities nhưng không phải Aggregate Root riêng: tạo trong cùng file hoặc cùng namespace, dùng `private readonly List<ChildEntity> _children`.
-- Nếu aggregate không cần multi-tenancy (shared data): bỏ `ITenantEntity` và `HasQueryFilter`, nhưng phải nêu rõ lý do.
-- Nếu user yêu cầu scaffold cho Setting/MasterData: dừng và giải thích đây là over-engineering theo `ai-rules/01-clean-architecture.md`.
-- Nếu aggregate có nhiều Value Objects nhưng chưa có base `ValueObject`: tạo base class trước hoặc reuse base hiện có.
+- Aggregate có child entities: tạo trong cùng file với `private readonly List<ChildEntity> _children`.
+- Không cần multi-tenancy: bỏ `ITenantEntity`, nêu rõ lý do.
+- Master data/setting: dừng và giải thích đây là over-engineering.
+- Value Objects phức tạp: tạo file riêng với `readonly record struct` và factory validation.
 
 ## References
 
