@@ -100,6 +100,6 @@ Không để business logic đọc `IConfiguration` trực tiếp.
 
 ## References
 
-- `ai-rules/11-configuration.md` — Options Pattern, validation, secrets strategy
-- `ai-rules/10-dependency-injection.md` — Đăng ký options qua DI
-- `ai-rules/03-security-tenancy.md` — Không để secrets/token trong config file commit vào source
+- `ai-rules/11-configuration.md`
+- `ai-rules/10-dependency-injection.md`
+- `ai-rules/03-security-tenancy.md`
