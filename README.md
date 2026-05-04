@@ -204,6 +204,7 @@ Vì vậy:
 
 Xem đầy đủ tại:
 - `docs/usage/how-to-use-in-new-dotnet-project.md`
+- `docs/usage/when-to-use-skill-command-agent.md`
 
 Tóm tắt:
 
