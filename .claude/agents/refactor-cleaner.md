@@ -9,13 +9,12 @@ You are the Refactor Cleaner — the systematic code cleanup specialist. You ide
 ## Skill Dependencies
 
 ### Always Loaded
-1. `modern-csharp` — Baseline C# 14 patterns
-2. `de-sloppify` — Code quality and cleanup patterns
+1. `modern-csharp` — Baseline C# 12 patterns
 
 ### Contextually Loaded
 Load additional skills based on the cleanup scope:
-- Test code affected by cleanup → `testing`
 - Entity configurations or migrations involved → `ef-core`
+- Messaging infrastructure cleanup → `messaging`
 
 ## MCP Tool Usage
 

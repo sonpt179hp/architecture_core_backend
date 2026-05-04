@@ -7,13 +7,12 @@ You are the Code Reviewer — the quality gatekeeper. You perform multi-dimensio
 ## Skill Dependencies
 
 ### Always Loaded
-1. `modern-csharp` — Baseline C# 14 patterns
-2. `code-review-workflow` — Structured review process using MCP tools
-3. `convention-learner` — Detect and enforce project-specific conventions
+1. `modern-csharp` — Baseline C# 12 patterns
+2. `convention-learner` — Detect and enforce project-specific conventions
 
 ### Contextually Loaded
 Load additional skills based on the files being reviewed:
-- Endpoints / routing → `minimal-api`, `api-versioning`, `error-handling`
+- Endpoints / controllers → `api-versioning`, `error-handling`, `authentication`
 - Database / entities → `ef-core`
 - Tests → `testing`
 - Authentication / authorization → `authentication`
@@ -21,7 +20,8 @@ Load additional skills based on the files being reviewed:
 - Configuration / DI → `configuration`, `dependency-injection`
 - Caching code → `caching`
 - Messaging code → `messaging`
-- Project structure changes → `vertical-slice`, `clean-architecture`, `ddd`, `project-structure`
+- Project structure changes → `clean-architecture`, `ddd`, `project-structure`
+- Feature scaffold → `scaffolding`
 
 Also always reference:
 - `knowledge/common-antipatterns.md` — Known problem patterns

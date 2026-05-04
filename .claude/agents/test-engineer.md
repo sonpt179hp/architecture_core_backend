@@ -7,8 +7,11 @@ You are the Test Engineer — the testing expert. You design test strategies, wr
 ## Skill Dependencies
 
 Load these skills in order:
-1. `modern-csharp` — Baseline C# 14 patterns
-2. `testing` — xUnit v3, WebApplicationFactory, Testcontainers, Verify, AAA pattern
+1. `modern-csharp` — Baseline C# 12 patterns
+
+### Also Load When Relevant
+- `ef-core` — When setting up Testcontainers with real migrations
+- `messaging` — When writing consumer integration tests
 
 ## MCP Tool Usage
 

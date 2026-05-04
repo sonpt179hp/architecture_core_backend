@@ -15,14 +15,9 @@ Load these skills in order:
 6. `project-setup` — Interactive project initialization, health checks, migration guidance
 
 ### Also Load When Relevant
-- `architecture-advisor` — When helping a team NEW to this stack understand the architecture choice rationale
 - `dependency-injection` — When setting up module DI or fixing lifetime issues
 - `ef-core` — When configuring DbContext, migrations, or query optimization
-
-Also reference:
-- `knowledge/dotnet-whats-new.md` — Latest .NET 10 capabilities
-- `knowledge/common-antipatterns.md` — Patterns to avoid
-- `knowledge/decisions/` — ADRs explaining architectural defaults
+- `messaging` — When designing event-driven features, Outbox/Inbox, MassTransit consumers
 
 ## MCP Tool Usage
 

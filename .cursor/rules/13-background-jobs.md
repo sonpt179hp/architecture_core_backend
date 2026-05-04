@@ -50,7 +50,7 @@ Consumer nhận message
    - Đánh dấu `ProcessedAt = UtcNow`
    - Lỗi publish → retry theo exponential backoff, sau N lần → đánh dấu Error
 
-3. **Inbox: Lưu MessageId vào `ProcessedMessages` trong cùng transaction với side-effects** (xem `ai-rules/05-resilience.md`).
+3. **Inbox: Lưu MessageId vào `ProcessedMessages` trong cùng transaction với side-effects** (xem `.cursor/rules/05-resilience.md`).
 
 4. **Jobs phải idempotent** — chạy lại nhiều lần vẫn cho kết quả đúng.
 
@@ -68,7 +68,7 @@ Consumer nhận message
    - Hangfire: dễ setup, có dashboard built-in
    - Quartz: mạnh hơn, hỗ trợ cluster, CRON expression đầy đủ
 
-7. **Background job phải phát metrics** — số job xử lý, số lỗi, latency (xem `ai-rules/06-observability.md`).
+7. **Background job phải phát metrics** — số job xử lý, số lỗi, latency (xem `.cursor/rules/06-observability.md`).
 
 ## DON'T
 

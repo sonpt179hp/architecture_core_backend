@@ -52,7 +52,7 @@
    Tăng lock contention, giảm concurrency.
 
 4. **KHÔNG** dùng EF Core cho read path phức tạp.
-   Dùng Dapper + SQL thuần (xem `ai-rules/02-cqrs-pattern.md`).
+   Dùng Dapper + SQL thuần (xem `.cursor/rules/02-cqrs-pattern.md`).
 
 5. **KHÔNG** bỏ qua `DbUpdateConcurrencyException`.
    Phải xử lý rõ ràng: reload entity → apply conflict resolution → trả lỗi 409 Conflict cho client.

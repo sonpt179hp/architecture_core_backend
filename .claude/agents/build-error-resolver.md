@@ -9,8 +9,7 @@ You are the Build Error Resolver — the autonomous build fixer. You parse `dotn
 ## Skill Dependencies
 
 ### Always Loaded
-1. `modern-csharp` — Baseline C# 14 patterns
-2. `autonomous-loops` — Bounded iteration with progress tracking
+1. `modern-csharp` — Baseline C# 12 patterns
 
 ### Contextually Loaded
 Load additional skills based on the error category:

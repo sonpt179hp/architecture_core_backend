@@ -7,7 +7,7 @@
 | Agent | File | Primary Domain |
 |-------|------|---------------|
 | dotnet-architect | `agents/dotnet-architect.md` | Architecture, project structure, module boundaries |
-| api-designer | `agents/api-designer.md` | Minimal APIs, OpenAPI, versioning, rate limiting |
+| api-designer | `agents/api-designer.md` | Controllers, OpenAPI, versioning, rate limiting |
 | ef-core-specialist | `agents/ef-core-specialist.md` | Database, queries, migrations, EF Core patterns |
 | test-engineer | `agents/test-engineer.md` | Test strategy, xUnit, WebApplicationFactory, Testcontainers |
 | security-auditor | `agents/security-auditor.md` | Authentication, authorization, OWASP, secrets |
@@ -41,7 +41,9 @@ Match user intent to agent. When multiple agents could handle a query, the first
 | "Serilog", "OpenTelemetry", "CorrelationId", "tracing", "health/live", "health/ready" | devops-engineer | — |
 | "review this code", "PR review", "code quality" | code-reviewer | — |
 | "choose architecture", "which architecture", "architecture decision" | dotnet-architect | — |
-| "scaffold feature", "create feature", "add endpoint", "generate feature" | dotnet-architect | api-designer, ef-core-specialist |
+| "scaffold", "scaffold feature", "create feature", "add endpoint", "generate feature" | dotnet-architect | api-designer, ef-core-specialist |
+| "create command", "create query", "create handler", "generate use case" | dotnet-architect | api-designer, ef-core-specialist |
+| "new entity", "add entity", "scaffold entity", "domain entity" | dotnet-architect | ef-core-specialist |
 | "init project", "setup project", "new project", "generate CLAUDE.md" | dotnet-architect | — |
 | "health check", "analyze project", "project report" | code-reviewer | dotnet-architect |
 | "review PR", "review changes", "code review", "PR review" | code-reviewer | — |
@@ -50,7 +52,7 @@ Match user intent to agent. When multiple agents could handle a query, the first
 | "add feature" (architecture-appropriate) | dotnet-architect | api-designer, ef-core-specialist |
 | "refactor" | code-reviewer | dotnet-architect |
 | "build errors", "fix build", "won't compile" | build-error-resolver | — |
-| "clean up", "dead code", "unused code", "de-sloppify" | refactor-cleaner | — |
+| "clean up", "dead code", "unused code" | refactor-cleaner | — |
 
 ## Skill Loading Order
 
@@ -64,16 +66,16 @@ Agents load skills in dependency order. Core skills load first.
 
 | Agent | Skills |
 |-------|--------|
-| dotnet-architect | modern-csharp, architecture-advisor, clean-architecture, project-structure, scaffolding, project-setup, ddd |
-| api-designer | modern-csharp, api-versioning, authentication, error-handling, api-contract |
+| dotnet-architect | modern-csharp, clean-architecture, project-structure, scaffolding, project-setup, ddd |
+| api-designer | modern-csharp, authentication, error-handling, openapi |
 | ef-core-specialist | modern-csharp, ef-core, configuration, migration-workflow |
-| test-engineer | modern-csharp, testing |
+| test-engineer | modern-csharp |
 | security-auditor | modern-csharp, authentication, configuration |
 | performance-analyst | modern-csharp, caching |
-| devops-engineer | modern-csharp, docker, ci-cd, aspire |
-| code-reviewer | modern-csharp, code-review-workflow, convention-learner + contextual (loads relevant skills incl. clean-architecture, ddd based on files under review) |
-| build-error-resolver | modern-csharp, autonomous-loops + contextual: ef-core, dependency-injection |
-| refactor-cleaner | modern-csharp, de-sloppify + contextual: testing, ef-core |
+| devops-engineer | modern-csharp |
+| code-reviewer | modern-csharp, convention-learner + contextual (loads relevant skills incl. clean-architecture, ddd based on files under review) |
+| build-error-resolver | modern-csharp + contextual: ef-core, dependency-injection |
+| refactor-cleaner | modern-csharp + contextual: ef-core |
 
 ## MCP Tool Preferences
 
@@ -93,38 +95,6 @@ Agents should **prefer Roslyn MCP tools over file scanning** to reduce token con
 | Understand method call chains | `get_dependency_graph` | Reading multiple files and tracing calls |
 | Check which types have tests | `get_test_coverage_map` | Manually searching for test files |
 
-## Cross-Agent Meta Skills
-
-These 10 meta and productivity skills are not tied to a specific agent — any agent can load them when the context calls for it:
-
-| Skill | When to Load |
-|-------|-------------|
-| `self-correction-loop` | After ANY user correction — capture the rule in MEMORY.md |
-| `wrap-up-ritual` | User signals end of session — write handoff to `.claude/handoff.md` |
-| `context-discipline` | Context running low, large codebase navigation, planning exploration strategy |
-| `model-selection` | Choosing between Opus/Sonnet/Haiku, assigning subagent models |
-| `80-20-review` | Code review, PR review, deciding what to review in depth |
-| `split-memory` | CLAUDE.md exceeds 300 lines, need to split instructions across files |
-| `learning-log` | Non-obvious discovery during development — log the insight |
-| `instinct-system` | Pattern detection across sessions — observe-hypothesize-confirm cycle for project conventions |
-| `session-management` | Session start/end — load handoff, detect solution, write session summary |
-| `autonomous-loops` | Iterative fix loops — build-fix, test-fix, refactor with bounded iterations |
-
-### Meta Skill Routing
-
-| User Intent Pattern | Skill |
-|---|---|
-| "learn from mistakes", "remember this", "don't do that again" | self-correction-loop |
-| "wrap up", "done for today", "save progress", "handoff" | wrap-up-ritual |
-| "context", "running out of tokens", "too many files" | context-discipline |
-| "which model", "use Opus", "use Sonnet", "switch model" | model-selection |
-| "review this", "what should I review", "blast radius" | 80-20-review |
-| "split CLAUDE.md", "too long", "organize instructions" | split-memory |
-| "log this", "document this finding", "gotcha" | learning-log |
-| "show instincts", "what have you learned", "confidence scores" | instinct-system |
-| "start session", "load handoff", "session start" | session-management |
-| "fix build loop", "keep fixing", "auto-fix" | autonomous-loops |
-
 ## Slash Commands
 
 Commands map to skills and agents. Use these as shortcuts for common workflows.
@@ -132,21 +102,10 @@ Commands map to skills and agents. Use these as shortcuts for common workflows.
 | Command | Primary Skill | Primary Agent | Purpose |
 |---------|--------------|---------------|---------|
 | `/dotnet-init` | project-setup | dotnet-architect | Interactive project initialization |
-| `/plan` | architecture-advisor | dotnet-architect | Architecture-aware planning |
-| `/verify` | verification-loop | — | 7-phase verification pipeline |
-| `/tdd` | testing | test-engineer | Red-green-refactor workflow |
 | `/scaffold` | scaffolding | dotnet-architect | Architecture-aware feature scaffolding |
-| `/code-review` | code-review-workflow | code-reviewer | MCP-powered code review |
-| `/build-fix` | autonomous-loops | build-error-resolver | Iterative build error fixing |
-| `/checkpoint` | wrap-up-ritual | — | Save progress (commit + handoff) |
 | `/security-scan` | security-scan | security-auditor | OWASP + secrets + dependency audit |
 | `/migrate` | migration-workflow | ef-core-specialist | Safe EF Core migration workflow |
 | `/health-check` | health-check | code-reviewer | Graded project health report |
-| `/de-sloppify` | de-sloppify | refactor-cleaner | Systematic code cleanup |
-| `/wrap-up` | wrap-up-ritual | — | Session ending ritual |
-| `/instinct-status` | instinct-system | — | Show learned instincts |
-| `/instinct-export` | instinct-system | — | Export instincts to shareable format |
-| `/instinct-import` | instinct-system | — | Import instincts from another project |
 
 ## Conflict Resolution
 
@@ -158,8 +117,6 @@ When two agents could handle a query:
 4. **Code review is holistic** — The code-reviewer loads skills contextually based on what's in the PR
 
 ## Token Budget Guidance
-
-For detailed context management strategies, see the **`context-discipline`** skill.
 
 - **Small queries** (single pattern/fix): Load 1-2 skills, use MCP tools for context
 - **Medium queries** (feature implementation): Load 3-4 skills, use MCP tools to understand existing code

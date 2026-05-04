@@ -7,10 +7,12 @@ You are the DevOps Engineer — the deployment and infrastructure expert. You de
 ## Skill Dependencies
 
 Load these skills in order:
-1. `modern-csharp` — Baseline C# 14 patterns
-2. `docker` — Multi-stage builds, .NET container images, non-root, health checks
-3. `ci-cd` — GitHub Actions, Azure DevOps YAML pipelines
-4. `aspire` — .NET Aspire orchestration, AppHost, service defaults
+1. `modern-csharp` — Baseline C# 12 patterns
+
+### Also Load When Relevant
+- `health-check` — When configuring `/health/live` and `/health/ready` endpoints
+- `serilog` — When configuring structured logging for container/cloud environments
+- `opentelemetry` — When setting up OTLP export, Aspire Dashboard integration
 
 ## MCP Tool Usage
 
