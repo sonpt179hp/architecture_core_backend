@@ -32,9 +32,9 @@ Mỗi đơn vị là một **tenant độc lập**, nhưng tenant có quan hệ 
 Ví dụ:
 
 ```text
-Bộ Y Tế                    TenantId = 1     Path = /1/
-Cục Y Tế Dự Phòng          TenantId = 15    Path = /1/15/
-Trung tâm tiêm chủng       TenantId = 300   Path = /1/15/300/
+Bộ Y Tế                    TenantId = <guid>    Code = BYT      Path = /BYT/
+Cục Y Tế Dự Phòng          TenantId = <guid>    Code = YTDP     Path = /BYT/YTDP/
+Trung tâm tiêm chủng       TenantId = <guid>    Code = TTVC     Path = /BYT/YTDP/TTVC/
 ```
 
 ---
@@ -150,9 +150,9 @@ Trả lời câu hỏi:
 Tenant dùng `Path` để lưu đường dẫn phân cấp:
 
 ```text
-/1/
-/1/15/
-/1/15/300/
+/BYT/
+/BYT/YTDP/
+/BYT/YTDP/TTVC/
 ```
 
 `Path` phục vụ query subtree bằng prefix search:
@@ -209,11 +209,40 @@ Bảng lõi của mô hình hierarchical multi-tenant.
 
 - `TenantId`: khóa chính, dùng làm FK ở các bảng khác.
 - `ParentTenantId`: tenant cha trực tiếp.
-- `Path`: materialized path, ví dụ `/1/15/300/`.
+- `Code`: mã ngắn gọn của tenant (max 50 ký tự), immutable, dùng để build Path.
+- `Path`: materialized path dùng Code, ví dụ `/BYT/YTDP/TTVC/`.
 - `Level`: cấp độ trong cây.
 - `TenantType`: loại tenant, ví dụ Bộ/Cục/Trung tâm.
-- `Code`, `Name`: mã và tên nghiệp vụ.
+- `Name`: tên nghiệp vụ.
 - `IsActive`, `IsDeleted`: trạng thái.
+
+### Quy tắc xây dựng Path
+
+1. **Code validation**:
+   - Chỉ chứa chữ cái (A-Z), số (0-9), gạch dưới (_)
+   - Không dấu tiếng Việt
+   - Độ dài: 2-50 ký tự
+   - Unique trong toàn hệ thống
+   - Immutable (không được đổi sau khi tạo)
+
+2. **Path construction**:
+   - Root tenant: Path = `/{Code}/`
+   - Child tenant: Path = `{ParentPath}{Code}/`
+   - Ví dụ: Parent `/BYT/`, Code `YTDP` → Path `/BYT/YTDP/`
+
+3. **Query pattern**:
+   ```sql
+   -- Lấy tất cả tenant con của BYT
+   WHERE Path LIKE '/BYT/%'
+   
+   -- Lấy tenant con trực tiếp của BYT (level 2)
+   WHERE Path LIKE '/BYT/%' AND Level = 2
+   ```
+
+4. **Migration từ hệ thống cũ**:
+   - Nếu tenant chưa có Code, sinh Code từ tên viết tắt
+   - Rebuild toàn bộ Path từ Code mới
+   - Validate không có Code trùng
 
 ---
 
@@ -643,7 +672,7 @@ erDiagram
         nvarchar50 Code
         nvarchar255 Name
         tinyint TenantType
-        varchar900 Path "Materialized Path: /1/15/300/"
+        varchar500 Path "Materialized Path: /BYT/YTDP/TTVC/"
         int Level
         bit IsActive
         datetime2 CreatedDate
@@ -888,7 +917,7 @@ Table Tenants [headercolor: #1E88E5] {
   Name nvarchar(255) [not null]
   TenantType tinyint [not null, note: '1=Bo, 2=Cuc/Vu/TongCuc, 3=TrungTam/Phong/...']
   Level int [not null]
-  Path varchar(900) [not null, note: 'Materialized Path, vd: /1/15/300/']
+  Path varchar(500) [not null, note: 'Materialized Path using Code, e.g., /BYT/YTDP/TTVC/']
   IsActive bit [not null, default: 1]
   CreatedDate datetime2 [not null]
   CreatedBy uniqueidentifier [null]

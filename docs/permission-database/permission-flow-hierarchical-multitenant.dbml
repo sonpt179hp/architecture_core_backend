@@ -20,7 +20,7 @@ Table Tenants [headercolor: #1E88E5] {
   Name nvarchar(255) [not null]
   TenantType tinyint [not null, note: '1=Bo, 2=Cuc/Vu/TongCuc, 3=TrungTam/Phong/...']
   Level int [not null]
-  Path varchar(900) [not null, note: 'Materialized Path, vd: /1/15/300/']
+  Path varchar(500) [not null, note: 'Materialized Path using Code, e.g., /BYT/YTDP/TTVC/']
   IsActive bit [not null, default: 1]
   CreatedDate datetime2 [not null]
   CreatedBy uniqueidentifier [null]
