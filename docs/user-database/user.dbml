@@ -1,0 +1,446 @@
+Project hierarchical_multitenant_permissions {
+  database_type: "SQLServer"
+  Note: '''
+    Production-ready DBML for dbdiagram.io relationship view.
+    Full base audit columns are included for DDL readiness.
+
+    Last updated: 2026-05-06
+  '''
+}
+
+// =====================================================
+// 1. CORE ORGANIZATION
+// Place this group on the LEFT in dbdiagram.
+// =====================================================
+
+Table Tenants [headercolor: #1E88E5] {
+  TenantId uniqueidentifier [pk, not null]
+  ParentTenantId uniqueidentifier [null]
+  Code nvarchar(50) [not null]
+  Name nvarchar(255) [not null]
+  TenantType tinyint [not null, note: '1=Bo, 2=Cuc/Vu/TongCuc, 3=TrungTam/Phong/...']
+  Level int [not null]
+  Path varchar(900) [not null, note: 'Materialized Path, vd: /1/15/300/']
+  IsActive bit [not null, default: 1]
+  CreatedDate datetime2 [not null]
+  CreatedBy uniqueidentifier [null]
+  ModifiedDate datetime2 [null]
+  ModifiedBy uniqueidentifier [null]
+  IsDeleted bit [not null, default: 0]
+  DeletedBy uniqueidentifier [null]
+  DeletedAt datetime2 [null]
+
+  Indexes {
+    (Code) [unique, name: 'UX_Tenants_Code_Active']
+    (Path) [unique, name: 'UX_Tenants_Path_Active']
+    (ParentTenantId) [name: 'IX_Tenants_ParentTenantId']
+    (Path) [name: 'IX_Tenants_Path']
+  }
+
+  Note: 'Root table for tenant hierarchy and data visibility scope.'
+}
+
+Table Departments [headercolor: #1E88E5] {
+  DepartmentId uniqueidentifier [pk, not null]
+  TenantId uniqueidentifier [not null]
+  Code nvarchar(50) [not null]
+  Name nvarchar(255) [not null]
+  CreatedDate datetime2 [not null]
+  CreatedBy uniqueidentifier [null]
+  ModifiedDate datetime2 [null]
+  ModifiedBy uniqueidentifier [null]
+  IsDeleted bit [not null, default: 0]
+  DeletedBy uniqueidentifier [null]
+  DeletedAt datetime2 [null]
+
+  Indexes {
+    (TenantId, Code) [unique, name: 'UX_Departments_TenantId_Code']
+    (TenantId) [name: 'IX_Departments_TenantId']
+  }
+
+  Note: 'Internal department within a tenant.'
+}
+
+Table Positions [headercolor: #1E88E5] {
+  PositionId uniqueidentifier [pk, not null]
+  Code nvarchar(50) [not null]
+  Name nvarchar(255) [not null]
+  CreatedDate datetime2 [not null]
+  CreatedBy uniqueidentifier [null]
+  ModifiedDate datetime2 [null]
+  ModifiedBy uniqueidentifier [null]
+  IsDeleted bit [not null, default: 0]
+  DeletedBy uniqueidentifier [null]
+  DeletedAt datetime2 [null]
+
+  Indexes {
+    (Code) [unique, name: 'UX_Positions_Code']
+  }
+
+  Note: 'Global catalog of staff positions/titles. Shared across all tenants.'
+}
+
+// =====================================================
+// 2. IDENTITY
+// Place this group in the CENTER-LEFT.
+// =====================================================
+Table Staffs [headercolor: #43A047] {
+  StaffId           uniqueidentifier [pk, not null]
+  FirstName         nvarchar(100) [not null]
+  LastName          nvarchar(100) [not null]
+  UserName          nvarchar(100) [not null]
+  PasswordHash      nvarchar(255) [not null]
+  PhoneNumber       nvarchar(20)  [not null]
+  Email             nvarchar(255) [not null]
+  Gender            int  [not null]
+  IdCard            nvarchar(20)
+  DateOfBirth       date
+  Address           nvarchar(800)
+  TenantId          uniqueidentifier   [not null]
+  IsSignToken       bit [not null, default: 0]
+  IsSignPKI         bit [not null, default: 0]
+  SignDefault       int 
+  SignPhone         nvarchar(20)  
+  IsLocked          bit [not null, default: 0]
+  IsDeleted         bit [not null, default: 0]
+  CreatedDate       datetime2 [not null]
+  CreatedBy         uniqueidentifier [null]
+  ModifiedDate      datetime2 [null]
+  ModifiedBy        uniqueidentifier [null]
+  DeletedBy         uniqueidentifier [null]
+  DeletedAt         datetime2 [null]
+
+  Indexes {
+    (UserName) [unique, name: 'UX_Staffs_UserName']
+    (Email)    [unique, name: 'UX_Staffs_Email']
+    (TenantId) [name: 'IX_Staffs_TenantId']
+    (PhoneNumber) [name: 'IX_Staffs_PhoneNumber']
+  }
+
+  Note: 'Global staff identity. Not tied to any specific tenant. Tenant membership is defined via RoleOfStaffs.'
+}
+
+// =====================================================
+// 3. RBAC PERMISSIONS
+// Place this group in the CENTER.
+// =====================================================
+
+Table Roles [headercolor: #FB8C00] {
+  RoleId uniqueidentifier [pk, not null]
+  TenantId uniqueidentifier [not null]
+  Code nvarchar(100) [not null]
+  Name nvarchar(255) [not null]
+  Description nvarchar(500) [null]
+  IsDefault bit [not null, default: 0]
+  IsLocked bit [not null, default: 0]
+  CreatedDate datetime2 [not null]
+  CreatedBy uniqueidentifier [null]
+  ModifiedDate datetime2 [null]
+  ModifiedBy uniqueidentifier [null]
+  IsDeleted bit [not null, default: 0]
+  DeletedBy uniqueidentifier [null]
+  DeletedAt datetime2 [null]
+
+  Indexes {
+    (TenantId, Code) [unique, name: 'UX_Roles_TenantId_Code_Active']
+    (TenantId) [name: 'IX_Roles_TenantId']
+  }
+
+  Note: 'Role package scoped by tenant.'
+}
+
+Table Actions [headercolor: #FB8C00] {
+  ActionId uniqueidentifier [pk, not null]
+  Code nvarchar(150) [not null]
+  Name nvarchar(255) [not null]
+  Description nvarchar(500) [null]
+  IsActive bit [not null, default: 1]
+  CreatedDate datetime2 [not null]
+  CreatedBy uniqueidentifier [null]
+  ModifiedDate datetime2 [null]
+  ModifiedBy uniqueidentifier [null]
+  IsDeleted bit [not null, default: 0]
+  DeletedBy uniqueidentifier [null]
+  DeletedAt datetime2 [null]
+
+  Indexes {
+    (Code) [unique, name: 'UX_Actions_Code_Active']
+  }
+
+  Note: 'Atomic permission, eg: document.view, document.approve.'
+}
+
+Table RoleOfStaffs [headercolor: #FB8C00] {
+  RoleOfStaffId uniqueidentifier [pk, not null]
+  StaffId uniqueidentifier [not null]
+  RoleId uniqueidentifier [not null]
+  TenantId uniqueidentifier [not null, note: 'Tenant where this role is assigned']
+  DepartmentId uniqueidentifier [null]
+  PositionId uniqueidentifier [null]
+  IsDefault bit [not null, default: 0]
+  IsActive bit [not null, default: 1]
+  CreatedDate datetime2 [not null]
+  CreatedBy uniqueidentifier [null]
+  ModifiedDate datetime2 [null]
+  ModifiedBy uniqueidentifier [null]
+  IsDeleted bit [not null, default: 0]
+  DeletedBy uniqueidentifier [null]
+  DeletedAt datetime2 [null]
+
+  Indexes {
+    (StaffId, RoleId, TenantId) [unique, name: 'UX_RoleOfStaffs_Staff_Role_Tenant']
+    (StaffId, TenantId) [name: 'IX_RoleOfStaffs_Staff_Tenant']
+    (TenantId, RoleId) [name: 'IX_RoleOfStaffs_Tenant_Role']
+  }
+
+  Note: 'Assign role to staff at a specific tenant.'
+}
+
+Table ActionRoles [headercolor: #FB8C00] {
+  RoleId uniqueidentifier [not null]
+  ActionId uniqueidentifier [not null]
+  CreatedDate datetime2 [not null]
+  CreatedBy uniqueidentifier [null]
+  ModifiedDate datetime2 [null]
+  ModifiedBy uniqueidentifier [null]
+  IsDeleted bit [not null, default: 0]
+  DeletedBy uniqueidentifier [null]
+  DeletedAt datetime2 [null]
+
+  Indexes {
+    (RoleId, ActionId) [pk, unique, name: 'PK_ActionRoles']
+  }
+
+  Note: 'Main RBAC mapping: role -> action.'
+}
+
+Table StaffActions [headercolor: #FB8C00] {
+  StaffActionId uniqueidentifier [pk, not null]
+  StaffId uniqueidentifier [not null]
+  TenantId uniqueidentifier [not null, note: 'Tenant where this override applies']
+  ActionId uniqueidentifier [not null]
+  RoleId uniqueidentifier [null]
+  OverrideType tinyint [not null, note: '1=Grant, 2=Revoke']
+  Note nvarchar(500) [null]
+  CreatedDate datetime2 [not null]
+  CreatedBy uniqueidentifier [null]
+  ModifiedDate datetime2 [null]
+  ModifiedBy uniqueidentifier [null]
+  IsDeleted bit [not null, default: 0]
+  DeletedBy uniqueidentifier [null]
+  DeletedAt datetime2 [null]
+
+  Indexes {
+    (StaffId, TenantId, ActionId, RoleId) [name: 'IX_StaffActions_Staff_Tenant_Action_Role']
+  }
+
+  Note: 'Per-staff override on top of role permissions at a specific tenant.'
+}
+
+// =====================================================
+// 4. PERMISSION TEMPLATES
+// Place this group below RBAC.
+// =====================================================
+
+Table GroupActions [headercolor: #8E24AA] {
+  GroupActionId uniqueidentifier [pk, not null]
+  Code nvarchar(100) [not null]
+  Name nvarchar(255) [not null]
+  Description nvarchar(500) [null]
+  IsActive bit [not null, default: 1]
+  CreatedDate datetime2 [not null]
+  CreatedBy uniqueidentifier [null]
+  ModifiedDate datetime2 [null]
+  ModifiedBy uniqueidentifier [null]
+  IsDeleted bit [not null, default: 0]
+  DeletedBy uniqueidentifier [null]
+  DeletedAt datetime2 [null]
+
+  Indexes {
+    (Code) [unique, name: 'UX_GroupActions_Code']
+  }
+
+  Note: 'Permission template/group.'
+}
+
+Table GroupActionDetails [headercolor: #8E24AA] {
+  GroupActionId uniqueidentifier [not null]
+  ActionId uniqueidentifier [not null]
+  CreatedDate datetime2 [not null]
+  CreatedBy uniqueidentifier [null]
+  ModifiedDate datetime2 [null]
+  ModifiedBy uniqueidentifier [null]
+  IsDeleted bit [not null, default: 0]
+  DeletedBy uniqueidentifier [null]
+  DeletedAt datetime2 [null]
+
+  Indexes {
+    (GroupActionId, ActionId) [pk, unique, name: 'PK_GroupActionDetails']
+  }
+
+  Note: 'Actions included in a permission template.'
+}
+
+Table GroupRoles [headercolor: #8E24AA] {
+  GroupActionId uniqueidentifier [not null]
+  RoleId uniqueidentifier [not null]
+  CreatedDate datetime2 [not null]
+  CreatedBy uniqueidentifier [null]
+  ModifiedDate datetime2 [null]
+  ModifiedBy uniqueidentifier [null]
+  IsDeleted bit [not null, default: 0]
+  DeletedBy uniqueidentifier [null]
+  DeletedAt datetime2 [null]
+
+  Indexes {
+    (GroupActionId, RoleId) [pk, unique, name: 'PK_GroupRoles']
+  }
+
+  Note: 'Assign permission template to role.'
+}
+
+// =====================================================
+// 5. API AUTHORIZATION
+// Place this group on the RIGHT of Actions.
+// =====================================================
+
+Table Apis [headercolor: #E53935] {
+  ApiId uniqueidentifier [pk, not null]
+  ServiceGroup nvarchar(50) [not null, note: 'VD: ApiService']
+  ControllerCode nvarchar(150) [not null, note: 'VD: IncomingController']
+  ActionCode nvarchar(150) [not null, note: 'VD: GetByFilter']
+  HttpMethod nvarchar(10) [not null, note: 'GET/POST/PUT/DELETE']
+  EndpointPattern nvarchar(500) [null]
+  IsActive bit [not null, default: 1]
+  CreatedDate datetime2 [not null]
+  CreatedBy uniqueidentifier [null]
+  ModifiedDate datetime2 [null]
+  ModifiedBy uniqueidentifier [null]
+  IsDeleted bit [not null, default: 0]
+  DeletedBy uniqueidentifier [null]
+  DeletedAt datetime2 [null]
+
+  Indexes {
+    (ServiceGroup, ControllerCode, ActionCode, HttpMethod) [unique, name: 'UX_Apis_Endpoint_Active']
+  }
+
+  Note: 'Endpoint registry/master table.'
+}
+
+Table ApiActions [headercolor: #E53935] {
+  ApiActionId uniqueidentifier [pk, not null]
+  ApiId uniqueidentifier [not null]
+  ActionId uniqueidentifier [not null]
+  IsRequired bit [not null, default: 1]
+  CreatedDate datetime2 [not null]
+  CreatedBy uniqueidentifier [null]
+  ModifiedDate datetime2 [null]
+  ModifiedBy uniqueidentifier [null]
+  IsDeleted bit [not null, default: 0]
+  DeletedBy uniqueidentifier [null]
+  DeletedAt datetime2 [null]
+
+  Indexes {
+    (ApiId, ActionId) [unique, name: 'UX_ApiActions_Api_Action']
+  }
+
+  Note: 'Map API endpoint to required business action.'
+}
+
+Table RoleOfApis [headercolor: #E53935] {
+  RoleOfApiId uniqueidentifier [pk, not null]
+  ApiId uniqueidentifier [not null]
+  RoleId uniqueidentifier [not null]
+  IsActive bit [not null, default: 1]
+  CreatedDate datetime2 [not null]
+  CreatedBy uniqueidentifier [null]
+  ModifiedDate datetime2 [null]
+  ModifiedBy uniqueidentifier [null]
+  IsDeleted bit [not null, default: 0]
+  DeletedBy uniqueidentifier [null]
+  DeletedAt datetime2 [null]
+
+  Indexes {
+    (ApiId, RoleId) [unique, name: 'UX_RoleOfApis_Api_RoleId']
+    (RoleId) [name: 'IX_RoleOfApis_RoleId']
+  }
+
+  Note: 'Compatibility mapping: API endpoint -> role. Kept only for backward compatibility.'
+}
+
+// =====================================================
+// 6. BUSINESS DATA EXAMPLE
+// Place this group on the FAR RIGHT.
+// =====================================================
+
+Table Documents [headercolor: #546E7A] {
+  DocumentId uniqueidentifier [pk, not null]
+  TenantId uniqueidentifier [not null]
+  Title nvarchar(500) [not null]
+  Status tinyint [not null]
+  CreatedDate datetime2 [not null]
+  CreatedBy uniqueidentifier [null]
+  ModifiedDate datetime2 [null]
+  ModifiedBy uniqueidentifier [null]
+  IsDeleted bit [not null, default: 0]
+  DeletedBy uniqueidentifier [null]
+  DeletedAt datetime2 [null]
+
+  Indexes {
+    (TenantId) [name: 'IX_Documents_TenantId']
+  }
+
+  Note: 'Example business table. All real business tables should store TenantId.'
+}
+
+// =====================================================
+// RELATIONSHIPS - ORGANIZATION
+// =====================================================
+
+Ref: Tenants.ParentTenantId > Tenants.TenantId [delete: restrict]
+Ref: Departments.TenantId > Tenants.TenantId [delete: restrict]
+Ref: Staffs.TenantId > Tenants.TenantId [delete: set null]
+
+// =====================================================
+// RELATIONSHIPS - RBAC
+// =====================================================
+
+Ref: Roles.TenantId > Tenants.TenantId [delete: restrict]
+Ref: RoleOfStaffs.StaffId > Staffs.StaffId [delete: restrict]
+Ref: RoleOfStaffs.RoleId > Roles.RoleId [delete: restrict]
+Ref: RoleOfStaffs.TenantId > Tenants.TenantId [delete: restrict]
+Ref: RoleOfStaffs.DepartmentId > Departments.DepartmentId [delete: set null]
+Ref: RoleOfStaffs.PositionId > Positions.PositionId [delete: set null]
+Ref: ActionRoles.RoleId > Roles.RoleId [delete: restrict]
+Ref: ActionRoles.ActionId > Actions.ActionId [delete: restrict]
+Ref: StaffActions.StaffId > Staffs.StaffId [delete: restrict]
+Ref: StaffActions.TenantId > Tenants.TenantId [delete: restrict]
+Ref: StaffActions.ActionId > Actions.ActionId [delete: restrict]
+Ref: StaffActions.RoleId > Roles.RoleId [delete: set null]
+
+// =====================================================
+// RELATIONSHIPS - PERMISSION TEMPLATES
+// =====================================================
+
+Ref: GroupActionDetails.GroupActionId > GroupActions.GroupActionId [delete: restrict]
+Ref: GroupActionDetails.ActionId > Actions.ActionId [delete: restrict]
+Ref: GroupRoles.GroupActionId > GroupActions.GroupActionId [delete: restrict]
+Ref: GroupRoles.RoleId > Roles.RoleId [delete: restrict]
+
+// =====================================================
+// RELATIONSHIPS - API AUTHORIZATION
+// =====================================================
+
+Ref: ApiActions.ApiId > Apis.ApiId [delete: restrict]
+Ref: ApiActions.ActionId > Actions.ActionId [delete: restrict]
+Ref: RoleOfApis.ApiId > Apis.ApiId [delete: restrict]
+Ref: RoleOfApis.RoleId > Roles.RoleId [delete: restrict]
+
+// =====================================================
+// RELATIONSHIPS - BUSINESS DATA
+// =====================================================
+
+Ref: Documents.TenantId > Tenants.TenantId [delete: restrict]
+
+
+Ref: "GroupActionDetails"."GroupActionId" < "GroupActionDetails"."CreatedBy"
