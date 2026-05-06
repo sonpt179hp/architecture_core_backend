@@ -97,12 +97,12 @@ Table Staffs [headercolor: #43A047] {
   DateOfBirth       date
   Address           nvarchar(800)
   TenantId          uniqueidentifier   [not null]
-  IsSignToken       boolean      [not null, default: false]
-  IsSignPKI         boolean      [not null, default: false]
+  IsSignToken       bit [not null, default: 0]
+  IsSignPKI         bit [not null, default: 0]
   SignDefault       int 
   SignPhone         nvarchar(20)  
-  IsLocked          boolean      [not null, default: false]
-  IsDeleted         boolean      [not null, default: false]
+  IsLocked          bit [not null, default: 0]
+  IsDeleted         bit [not null, default: 0]
   CreatedDate       datetime2 [not null]
   CreatedBy         uniqueidentifier [null]
   ModifiedDate      datetime2 [null]
