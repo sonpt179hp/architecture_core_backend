@@ -6,17 +6,9 @@
   <title>Dashboard Portal QLVB - Bộ Tài chính</title>
   <style>
     :root {
-      --green: #2E7D32;
-      --amber: #F9A825;
-      --red: #D32F2F;
-      --blue: #1565C0;
-      --bg: #F5F7FA;
-      --card: #FFFFFF;
-      --text: #1F2937;
-      --muted: #6B7280;
-      --border: #E5E7EB;
-      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-      --radius: 18px;
+      --green: #2E7D32; --amber: #F9A825; --red: #D32F2F; --blue: #1565C0;
+      --bg: #F5F7FA; --card: #FFFFFF; --text: #1F2937; --muted: #6B7280;
+      --border: #E5E7EB; --shadow: 0 10px 30px rgba(15,23,42,0.08); --radius: 18px;
     }
 
     * { box-sizing: border-box; }
@@ -24,7 +16,7 @@
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: radial-gradient(circle at top, #ffffff 0%, #f5f7fa 55%, #edf2f7 100%);
+      background: var(--bg);
       color: var(--text);
       line-height: 1.5;
     }
@@ -35,13 +27,22 @@
       padding: 24px;
     }
 
+    .top-banner {
+      margin-bottom: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
     .hero {
       background: linear-gradient(135deg, #0f4c9b 0%, #1565C0 40%, #1f7ae0 100%);
       color: #fff;
       border-radius: 24px;
-      padding: 28px 32px;
+      padding: 30px 32px;
       box-shadow: 0 16px 40px rgba(21, 101, 192, 0.22);
-      margin-bottom: 24px;
+      margin-bottom: 22px;
       display: flex;
       justify-content: space-between;
       gap: 24px;
@@ -49,17 +50,26 @@
       flex-wrap: wrap;
     }
 
-    .hero h1 {
+    .hero h1,
+    .hero h2 {
       margin: 0;
       font-size: 30px;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.02em;
     }
 
     .hero p {
       margin: 10px 0 0;
       font-size: 15px;
-      color: rgba(255,255,255,0.9);
-      max-width: 760px;
+      color: rgba(255,255,255,0.92);
+      max-width: 780px;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      align-items: flex-end;
+      min-width: 260px;
     }
 
     .hero-badge {
@@ -67,8 +77,27 @@
       padding: 10px 16px;
       border-radius: 999px;
       background: rgba(255,255,255,0.14);
-      border: 1px solid rgba(255,255,255,0.2);
-      font-weight: 700;
+      border: 1px solid rgba(255,255,255,0.22);
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .hero-filters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .hero-filter {
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.20);
+      font-size: 14px;
+      font-weight: 800;
+      color: #fff;
+      backdrop-filter: blur(6px);
     }
 
     .tabs {
@@ -79,8 +108,8 @@
     }
 
     .tab-button {
-      border: 1px solid rgba(21, 101, 192, 0.12);
-      background: rgba(255,255,255,0.96);
+      border: 1px solid rgba(21, 101, 192, 0.14);
+      background: rgba(255,255,255,0.98);
       color: var(--muted);
       padding: 14px 18px;
       border-radius: 12px;
@@ -106,70 +135,62 @@
     }
 
     .section-card {
-      background: rgba(255,255,255,0.96);
-      border: 1px solid rgba(255,255,255,0.6);
+      background: var(--card);
+      border: 1px solid var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
       padding: 24px;
-      backdrop-filter: blur(4px);
     }
 
-    .dashboard-header {
+    .section-title {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 20px;
+      gap: 12px;
+      margin-bottom: 16px;
       flex-wrap: wrap;
     }
 
-    .dashboard-header h2 {
+    .section-title h3 {
       margin: 0;
-      font-size: 30px;
+      font-size: 19px;
+      letter-spacing: 0.02em;
     }
 
-    .dashboard-header p {
-      margin: 8px 0 0;
+    .section-title p,
+    .section-title span {
+      margin: 4px 0 0;
       color: var(--muted);
-      font-size: 15px;
-    }
-
-    .filters {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .filter-pill {
-      padding: 10px 14px;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
-      color: var(--text);
     }
 
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 16px;
+    }
+
+    .kpi-grid.public-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
     .kpi-card {
       background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
       border: 1px solid #e4ecf5;
       border-radius: 18px;
-      padding: 22px;
+      padding: 20px;
       position: relative;
       overflow: hidden;
+      min-height: 138px;
     }
 
     .kpi-card::after {
       content: "";
       position: absolute;
-      inset: auto -20px -30px auto;
-      width: 110px;
-      height: 110px;
+      inset: auto -16px -28px auto;
+      width: 108px;
+      height: 108px;
       background: rgba(21, 101, 192, 0.06);
       border-radius: 50%;
     }
@@ -179,11 +200,13 @@
       font-size: 14px;
       font-weight: 700;
       margin-bottom: 10px;
+      position: relative;
+      z-index: 1;
     }
 
     .kpi-value {
       font-size: 34px;
-      line-height: 1.1;
+      line-height: 1.05;
       font-weight: 800;
       margin-bottom: 8px;
       position: relative;
@@ -198,78 +221,108 @@
       z-index: 1;
     }
 
-    .kpi-card.highlight .kpi-value { color: var(--green); }
-    .kpi-card.warning .kpi-value, .kpi-card.warning .kpi-delta { color: #9A6700; }
+    .kpi-card.success .kpi-value,
+    .kpi-card.success .kpi-delta { color: var(--green); }
 
-    .section-title {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
+    .kpi-card.warning .kpi-value,
+    .kpi-card.warning .kpi-delta { color: #9A6700; }
 
-    .section-title h3 {
-      margin: 0;
-      font-size: 18px;
-    }
+    .kpi-card.danger .kpi-value,
+    .kpi-card.danger .kpi-delta { color: var(--red); }
 
-    .section-title span {
+    .kpi-note {
+      margin-top: -6px;
       color: var(--muted);
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 600;
     }
 
-    .two-col,
-    .portal-grid {
+    .grid-two {
       display: grid;
       grid-template-columns: 1.2fr 1fr;
       gap: 20px;
     }
 
-    .ranking-list,
+    .grid-equal {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
     .alert-list,
-    .highlight-list,
-    .note-list {
+    .ranking-list,
+    .insight-list {
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
 
-    .rank-item,
     .alert-item,
-    .note-item {
+    .rank-item {
       display: flex;
       justify-content: space-between;
       gap: 14px;
       align-items: flex-start;
-      padding: 14px 0;
+      padding: 16px 0;
       border-bottom: 1px solid var(--border);
     }
 
-    .rank-item:last-child,
+    .alert-item:first-child,
+    .rank-item:first-child {
+      padding-top: 6px;
+    }
+
     .alert-item:last-child,
-    .note-item:last-child {
+    .rank-item:last-child {
       border-bottom: none;
       padding-bottom: 0;
     }
 
-    .rank-main,
-    .alert-main {
-      min-width: 0;
-    }
+    .alert-main,
+    .rank-main { min-width: 0; }
 
-    .rank-title,
-    .alert-title {
-      font-weight: 800;
+    .severity-row,
+    .rank-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
       margin-bottom: 4px;
+      flex-wrap: wrap;
     }
 
+    .severity-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+
+    .severity-icon.critical { background: rgba(211, 47, 47, 0.12); color: var(--red); }
+    .severity-icon.warning { background: rgba(249, 168, 37, 0.18); color: #9A6700; }
+    .severity-icon.info { background: rgba(21, 101, 192, 0.12); color: var(--blue); }
+
+    .alert-title,
+    .rank-title {
+      font-weight: 800;
+      font-size: 15px;
+    }
+
+    .alert-desc,
+    .rank-desc,
     .rank-meta,
-    .alert-meta,
-    .note-item {
+    .alert-time {
       color: var(--muted);
       font-size: 14px;
+    }
+
+    .alert-time {
+      margin-top: 6px;
+      font-weight: 700;
     }
 
     .badge {
@@ -288,7 +341,7 @@
     .badge.red { background: rgba(211, 47, 47, 0.12); color: var(--red); }
     .badge.blue { background: rgba(21, 101, 192, 0.12); color: var(--blue); }
 
-    .trend-area {
+    .chart-wrap {
       border-top: 1px solid var(--border);
       padding-top: 18px;
       margin-top: 12px;
@@ -296,7 +349,7 @@
 
     .line-svg {
       width: 100%;
-      height: 270px;
+      height: 300px;
       display: block;
       background: linear-gradient(180deg, rgba(21,101,192,0.04), rgba(255,255,255,0));
       border-radius: 14px;
@@ -318,12 +371,39 @@
       border-radius: 50%;
       display: inline-block;
       margin-right: 6px;
+      vertical-align: middle;
     }
 
     .dot.blue { background: var(--blue); }
     .dot.green { background: var(--green); }
     .dot.red { background: var(--red); }
     .dot.amber { background: var(--amber); }
+
+    .ranking-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .sub-card {
+      background: #fbfdff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .sub-card h4 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      letter-spacing: 0.02em;
+    }
+
+    .sub-card p {
+      margin: 0 0 6px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
 
     .bar-compare {
       display: flex;
@@ -339,7 +419,14 @@
       align-items: center;
     }
 
-    .bar-track {
+    .bar-label,
+    .bar-value {
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .bar-track,
+    .progress-track {
       width: 100%;
       height: 14px;
       background: #E8EDF3;
@@ -353,10 +440,78 @@
       background: linear-gradient(90deg, #1565C0, #3c8bf0);
     }
 
-    .bar-label,
-    .bar-value {
-      font-size: 14px;
-      font-weight: 700;
+    .insight-box {
+      background: linear-gradient(135deg, rgba(21, 101, 192, 0.06), rgba(46, 125, 50, 0.06));
+      border: 1px solid rgba(21, 101, 192, 0.14);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    .insight-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .insight-header h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .insight-chip {
+      padding: 4px 10px;
+      background: rgba(21, 101, 192, 0.12);
+      color: var(--blue);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .insight-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    .insight-symbol {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 12px;
+      margin-top: 1px;
+    }
+
+    .insight-symbol.pos { background: rgba(46, 125, 50, 0.14); color: var(--green); }
+    .insight-symbol.neg { background: rgba(211, 47, 47, 0.12); color: var(--red); }
+    .insight-symbol.neu { background: rgba(21, 101, 192, 0.12); color: var(--blue); }
+
+    .action-btn,
+    .search-btn {
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(21, 101, 192, 0.18);
+      background: #fff;
+      color: var(--blue);
+      font-weight: 800;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(21, 101, 192, 0.08);
+    }
+
+    .action-btn.primary,
+    .search-btn {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
     }
 
     .search-box {
@@ -374,49 +529,102 @@
       font-size: 15px;
       color: var(--text);
       background: #fff;
+      outline: none;
+      transition: border-color 0.2s;
     }
 
-    .search-btn,
-    .cta-btn {
-      padding: 14px 18px;
+    .search-input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.10);
+    }
+
+    .search-feedback {
+      display: none;
+      margin-top: 14px;
+      padding: 12px 14px;
       border-radius: 12px;
-      border: none;
-      background: var(--blue);
-      color: #fff;
-      font-weight: 800;
-      cursor: pointer;
-      box-shadow: 0 10px 24px rgba(21, 101, 192, 0.18);
-    }
-
-    .insight-box {
-      background: linear-gradient(135deg, rgba(46, 125, 50, 0.08), rgba(21, 101, 192, 0.08));
-      border: 1px solid rgba(46, 125, 50, 0.12);
-      border-radius: 18px;
-      padding: 22px;
-    }
-
-    .insight-box p {
-      margin: 0 0 12px;
-      font-size: 16px;
-      font-weight: 800;
-    }
-
-    .highlight-list div {
+      background: #f8fbff;
+      border: 1px solid var(--border);
+      color: var(--muted);
       font-size: 14px;
+      font-weight: 700;
     }
 
-    .public-note {
-      background: rgba(21, 101, 192, 0.05);
-      border: 1px dashed rgba(21, 101, 192, 0.24);
-      border-radius: 14px;
-      padding: 16px 18px;
+    .search-feedback.visible {
+      display: block;
+    }
+
+    .search-result-card {
+      display: none;
+      margin-top: 16px;
+      border: 1px solid rgba(21, 101, 192, 0.2);
+      border-radius: 16px;
+      background: linear-gradient(135deg, #f0f7ff, #f8fbff);
+      padding: 20px;
+      animation: fadeIn 0.25s ease;
+    }
+
+    .search-result-card.visible {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .result-code {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--blue);
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .result-item {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+
+    .result-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .result-value {
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .legal-box {
+      background: rgba(21, 101, 192, 0.06);
+      border: 2px dashed rgba(21, 101, 192, 0.24);
+      border-radius: 16px;
+      padding: 18px;
       color: #38506d;
       font-size: 14px;
     }
 
-    .mini-split {
+    .public-chart-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1.15fr 0.85fr;
       gap: 20px;
     }
 
@@ -440,55 +648,364 @@
       margin-bottom: 10px;
     }
 
-    .progress-track {
-      height: 14px;
-      border-radius: 999px;
+    .progress-fill.green { background: var(--green); height: 100%; width: 92.4%; }
+    .progress-fill.amber { background: var(--amber); height: 100%; width: 7.6%; }
+
+    .stats-table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 620px;
+      font-size: 14px;
+    }
+
+    thead th {
+      background: #F1F5F9;
+      padding: 11px 14px;
+      text-align: left;
+      font-weight: 800;
+      font-size: 13px;
+      color: var(--muted);
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #F8FAFC; }
+
+    .rate-inline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rate-track {
+      flex: 1;
+      height: 8px;
       background: #E8EDF3;
+      border-radius: 999px;
       overflow: hidden;
+      min-width: 70px;
+    }
+
+    .rate-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #2E7D32, #4CAF50);
+    }
+
+    .rate-text {
+      font-weight: 800;
+      min-width: 46px;
+    }
+
+    .public-note {
+      background: rgba(21, 101, 192, 0.05);
+      border: 1px dashed rgba(21, 101, 192, 0.22);
+      border-radius: 14px;
+      padding: 16px 18px;
+      color: #38506d;
+      font-size: 14px;
+    }
+
+    .mini-stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .mini-stat {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 18px;
+      box-shadow: 0 4px 12px rgba(15,23,42,0.05);
+    }
+
+    .mini-stat-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 6px;
+    }
+
+    .mini-stat-value {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .mini-stat-sub {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .mini-stat.blue .mini-stat-value { color: var(--blue); }
+    .mini-stat.green .mini-stat-value { color: var(--green); }
+    .mini-stat.amber .mini-stat-value { color: #9A6700; }
+    .mini-stat.red .mini-stat-value { color: var(--red); }
+
+    .biz-type-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .biz-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 4px 12px rgba(15,23,42,0.05);
+    }
+
+    .biz-card-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 10px;
+    }
+
+    .biz-card-value {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .biz-card-rate {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .biz-card-sub {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .biz-card.blue .biz-card-value { color: var(--blue); }
+    .biz-card.blue .biz-card-rate { color: var(--blue); }
+    .biz-card.green .biz-card-value { color: var(--green); }
+    .biz-card.green .biz-card-rate { color: var(--green); }
+    .biz-card.amber .biz-card-value { color: #9A6700; }
+    .biz-card.amber .biz-card-rate { color: #9A6700; }
+    .biz-card.red .biz-card-value { color: var(--red); }
+    .biz-card.red .biz-card-rate { color: var(--red); }
+
+    .insight-forecast {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(21,101,192,0.12);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .forecast-col-title {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
       margin-bottom: 8px;
     }
 
-    .progress-fill.green { background: var(--green); height: 100%; width: 92%; }
-    .progress-fill.amber { background: var(--amber); height: 100%; width: 8%; }
+    .forecast-col-title.blue { color: var(--blue); }
+    .forecast-col-title.green { color: var(--green); }
+
+    .forecast-bullets {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .forecast-bullets li {
+      font-size: 13px;
+      padding-left: 16px;
+      position: relative;
+    }
+
+    .forecast-bullets li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+    }
+
+    .forecast-bullets.blue li::before { color: var(--blue); }
+    .forecast-bullets.green li::before { color: var(--green); }
+
+    .faq-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .faq-item {
+      background: #f8fbff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+
+    .faq-q {
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .faq-a {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    .contact-card {
+      background: #f8fbff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .contact-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 6px;
+    }
+
+    .contact-value {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .contact-sub {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      margin-top: 3px;
+    }
+
+    .update-note {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .update-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      flex-shrink: 0;
+    }
+
+    .delta-up { color: var(--green); font-weight: 800; font-size: 13px; }
+    .delta-down { color: var(--red); font-weight: 800; font-size: 13px; }
+
+    @media (max-width: 1200px) {
+      .mini-stats-row, .biz-type-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .contact-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .insight-forecast { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 900px) {
+      .mini-stats-row, .biz-type-grid, .contact-grid { grid-template-columns: 1fr; }
+    }
 
     .footer-note {
       margin-top: 24px;
       color: var(--muted);
       font-size: 13px;
-      text-align: right;
+      text-align: center;
     }
 
     @media (max-width: 1200px) {
-      .kpi-grid,
-      .two-col,
-      .portal-grid,
-      .mini-split {
+      .kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .kpi-grid.public-grid,
+      .grid-two,
+      .grid-equal,
+      .ranking-columns,
+      .public-chart-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
 
     @media (max-width: 900px) {
       .hero,
-      .dashboard-header {
-        flex-direction: column;
+      .hero-meta,
+      .hero-filters {
+        align-items: flex-start;
       }
 
       .kpi-grid,
-      .two-col,
-      .portal-grid,
-      .mini-split,
-      .search-box {
+      .kpi-grid.public-grid,
+      .grid-two,
+      .grid-equal,
+      .ranking-columns,
+      .public-chart-grid,
+      .search-box,
+      .result-grid {
         grid-template-columns: 1fr;
       }
 
       .bar-row {
         grid-template-columns: 1fr;
       }
+
+      .page {
+        padding: 18px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      table { min-width: 560px; }
+      .hero h1,
+      .hero h2 { font-size: 24px; }
+      .kpi-value { font-size: 30px; }
+      .line-svg { height: 270px; }
     }
 
     @media print {
       body { background: #fff; }
-      .page { max-width: none; padding: 8px; }
+      .page { max-width: none; padding: 10px; }
       .tab-panel { display: block !important; page-break-after: always; }
       .tab-panel:last-child { page-break-after: auto; }
       .section-card, .hero { box-shadow: none; }
@@ -497,178 +1014,308 @@
 </head>
 <body>
   <div class="page">
-    <div class="hero">
-      <div>
-        <h1>Portal Dashboard QLVB Bộ Tài chính</h1>
-        <p>Mockup giao diện Portal thiên về trình bày đẹp, sáng, ít thao tác; phù hợp chiếu màn hình, báo cáo giao ban và công bố chỉ số tổng hợp.</p>
-      </div>
-      <div class="hero-badge">Portal nội bộ cấp cao + Portal công khai tối giản</div>
+    <div class="top-banner">Dashboard Portal read-only • Mockup HTML5 độc lập</div>
+
+    <div class="tabs" role="tablist" aria-label="Chọn portal dashboard">
+      <button class="tab-button active" data-tab="tab-noi-bo" role="tab" aria-selected="true" aria-controls="tab-noi-bo">Portal nội bộ cấp cao</button>
+      <button class="tab-button" data-tab="tab-cong-khai" role="tab" aria-selected="false" aria-controls="tab-cong-khai">Portal công khai tối giản</button>
     </div>
 
-    <div class="tabs" role="tablist" aria-label="Chọn dashboard portal">
-      <button class="tab-button active" data-tab="tab-noi-bo" role="tab" aria-selected="true">Portal nội bộ cấp cao</button>
-      <button class="tab-button" data-tab="tab-cong-khai" role="tab" aria-selected="false">Portal công khai tối giản</button>
-    </div>
-
-    <section id="tab-noi-bo" class="tab-panel active" role="tabpanel">
+    <section id="tab-noi-bo" class="tab-panel active" role="tabpanel" aria-labelledby="tab-noi-bo">
       <div class="dashboard-section">
-        <div class="section-card">
-          <div class="dashboard-header">
-            <div>
-              <h2>PORTAL ĐIỀU HÀNH BỘ TÀI CHÍNH</h2>
-              <p>Bức tranh tổng quan toàn hệ thống quản lý văn bản để lãnh đạo cấp Bộ theo dõi nhanh.</p>
-            </div>
-            <div class="filters">
-              <div class="filter-pill">Tháng này ▼</div>
-              <div class="filter-pill">Toàn Bộ</div>
+        <div class="hero">
+          <div>
+            <h1>PORTAL ĐIỀU HÀNH BỘ TÀI CHÍNH</h1>
+            <p>Bức tranh tổng quan toàn hệ thống quản lý văn bản — cập nhật mỗi 30 phút</p>
+          </div>
+          <div class="hero-meta">
+            <div class="hero-badge">Tháng 5/2026 • Toàn Bộ</div>
+            <div class="hero-filters" aria-label="Bộ lọc thời gian và phạm vi">
+              <div class="hero-filter">Tháng này ▼</div>
+              <div class="hero-filter">Toàn Bộ ▼</div>
             </div>
           </div>
         </div>
 
-        <div class="kpi-grid">
+        <div class="kpi-grid" aria-label="Các chỉ số KPI tổng quan nội bộ">
           <div class="kpi-card">
             <div class="kpi-label">Tổng VB đến</div>
             <div class="kpi-value">12,430</div>
-            <div class="kpi-delta">+8.2% so với tháng trước</div>
+            <div class="kpi-delta">+8.2% so tháng trước</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-label">Tổng VB đi</div>
             <div class="kpi-value">8,214</div>
-            <div class="kpi-delta">+5.4% so với tháng trước</div>
+            <div class="kpi-delta">+5.4% so tháng trước</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-label">Tổng tờ trình</div>
             <div class="kpi-value">1,082</div>
-            <div class="kpi-delta">+2.1% theo chu kỳ báo cáo</div>
+            <div class="kpi-delta">+2.1% so tháng trước</div>
           </div>
-          <div class="kpi-card highlight">
+          <div class="kpi-card">
+            <div class="kpi-label">Tổng phiếu giao việc</div>
+            <div class="kpi-value">3,408</div>
+            <div class="kpi-delta">+4.7% so tháng trước</div>
+          </div>
+          <div class="kpi-card success">
             <div class="kpi-label">Tỷ lệ đúng hạn</div>
             <div class="kpi-value">91.6%</div>
-            <div class="kpi-delta">Tăng 2.1% so với tháng trước</div>
+            <div class="kpi-delta">Tăng 2.1 điểm % so tháng trước</div>
+          </div>
+          <div class="kpi-card danger">
+            <div class="kpi-label">Số quá hạn hiện tại</div>
+            <div class="kpi-value">847</div>
+            <div class="kpi-delta">Cần theo dõi và chỉ đạo</div>
+          </div>
+        </div>
+
+        <div class="kpi-note">Tỷ lệ đúng hạn = Số bản ghi hoàn thành đúng hạn / Tổng số đã hoàn thành × 100% (không tính Cancelled/Rejected)</div>
+
+        <div class="mini-stats-row" aria-label="Tổng quan tháng này">
+          <div class="mini-stat blue">
+            <div class="mini-stat-label">Đơn vị được giám sát</div>
+            <div class="mini-stat-value">84</div>
+            <div class="mini-stat-sub">Bao phủ toàn Bộ và các đơn vị trực thuộc</div>
+          </div>
+          <div class="mini-stat green">
+            <div class="mini-stat-label">Đơn vị đạt mục tiêu</div>
+            <div class="mini-stat-value">67</div>
+            <div class="mini-stat-sub">Chiếm 79.8% tổng số đơn vị theo dõi</div>
+          </div>
+          <div class="mini-stat amber">
+            <div class="mini-stat-label">Đơn vị cần lưu ý</div>
+            <div class="mini-stat-value">14</div>
+            <div class="mini-stat-sub">Có backlog tăng hoặc đúng hạn dưới ngưỡng</div>
+          </div>
+          <div class="mini-stat red">
+            <div class="mini-stat-label">Đơn vị cảnh báo cao</div>
+            <div class="mini-stat-value">03</div>
+            <div class="mini-stat-sub">Vượt ngưỡng quá hạn 10% cần chỉ đạo trực tiếp</div>
+          </div>
+        </div>
+
+        <div class="grid-two">
+          <div class="section-card">
+            <div class="section-title">
+              <div>
+                <h3>CẢNH BÁO ĐIỀU HÀNH</h3>
+                <p>Tự động phát hiện từ dữ liệu snapshot</p>
+              </div>
+            </div>
+            <div class="alert-list">
+              <div class="alert-item">
+                <div class="alert-main">
+                  <div class="severity-row">
+                    <span class="severity-icon critical" aria-hidden="true">!</span>
+                    <div class="alert-title">[CRITICAL] OverdueRateHigh</div>
+                  </div>
+                  <div class="alert-desc">Vụ KHTC: tỷ lệ quá hạn 14.2% — vượt ngưỡng 10%</div>
+                  <div class="alert-time">Phát sinh lúc 08:10 • 07/05/2026</div>
+                </div>
+                <span class="badge red">Nghiêm trọng</span>
+              </div>
+              <div class="alert-item">
+                <div class="alert-main">
+                  <div class="severity-row">
+                    <span class="severity-icon warning" aria-hidden="true">!</span>
+                    <div class="alert-title">[WARNING] BacklogSpike</div>
+                  </div>
+                  <div class="alert-desc">Cục CNTT: backlog tăng 38% so với trung bình 3 kỳ gần nhất</div>
+                  <div class="alert-time">Phát sinh lúc 08:18 • 07/05/2026</div>
+                </div>
+                <span class="badge amber">Cần theo dõi</span>
+              </div>
+              <div class="alert-item">
+                <div class="alert-main">
+                  <div class="severity-row">
+                    <span class="severity-icon warning" aria-hidden="true">!</span>
+                    <div class="alert-title">[WARNING] SubmissionStuck</div>
+                  </div>
+                  <div class="alert-desc">07 tờ trình đã ở trạng thái chờ duyệt hơn 5 ngày</div>
+                  <div class="alert-time">Phát sinh lúc 08:24 • 07/05/2026</div>
+                </div>
+                <span class="badge amber">Tồn đọng</span>
+              </div>
+              <div class="alert-item">
+                <div class="alert-main">
+                  <div class="severity-row">
+                    <span class="severity-icon warning" aria-hidden="true">!</span>
+                    <div class="alert-title">[WARNING] OverdueRateHigh</div>
+                  </div>
+                  <div class="alert-desc">TT Bồi dưỡng: tỷ lệ quá hạn 11.8%</div>
+                  <div class="alert-time">Phát sinh lúc 08:31 • 07/05/2026</div>
+                </div>
+                <span class="badge amber">Cần xử lý</span>
+              </div>
+              <div class="alert-item">
+                <div class="alert-main">
+                  <div class="severity-row">
+                    <span class="severity-icon info" aria-hidden="true">i</span>
+                    <div class="alert-title">[INFO] MissingUpdate</div>
+                  </div>
+                  <div class="alert-desc">Vụ Pháp chế: chưa có snapshot mới trong 48 giờ</div>
+                  <div class="alert-time">Phát sinh lúc 08:37 • 07/05/2026</div>
+                </div>
+                <span class="badge blue">Kiểm tra dữ liệu</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-card">
+            <div class="section-title">
+              <div>
+                <h3>XU HƯỚNG TOÀN HỆ THỐNG</h3>
+                <p>So sánh 6 tháng gần nhất</p>
+              </div>
+            </div>
+            <div class="chart-wrap">
+              <svg class="line-svg" viewBox="0 0 900 300" preserveAspectRatio="none" aria-label="Biểu đồ xu hướng toàn hệ thống 6 tháng">
+                <line x1="70" y1="240" x2="850" y2="240" stroke="#D5DCE5" stroke-width="1" />
+                <line x1="70" y1="40" x2="70" y2="240" stroke="#D5DCE5" stroke-width="1" />
+                <line x1="70" y1="80" x2="850" y2="80" stroke="#EEF2F7" stroke-width="1" />
+                <line x1="70" y1="120" x2="850" y2="120" stroke="#EEF2F7" stroke-width="1" />
+                <line x1="70" y1="160" x2="850" y2="160" stroke="#EEF2F7" stroke-width="1" />
+                <line x1="70" y1="200" x2="850" y2="200" stroke="#EEF2F7" stroke-width="1" />
+
+                <polyline fill="none" stroke="#1565C0" stroke-width="4" points="110,156 240,144 370,128 500,112 630,92 760,74" />
+                <polyline fill="none" stroke="#2E7D32" stroke-width="4" points="110,174 240,160 370,146 500,126 630,108 760,90" />
+                <polyline fill="none" stroke="#D32F2F" stroke-width="4" points="110,192 240,186 370,180 500,172 630,166 760,160" />
+
+                <g fill="#1565C0" font-size="12" font-weight="800" text-anchor="middle">
+                  <circle cx="110" cy="156" r="5" /><text x="110" y="144">10.4k</text>
+                  <circle cx="240" cy="144" r="5" /><text x="240" y="132">10.9k</text>
+                  <circle cx="370" cy="128" r="5" /><text x="370" y="116">11.3k</text>
+                  <circle cx="500" cy="112" r="5" /><text x="500" y="100">11.7k</text>
+                  <circle cx="630" cy="92" r="5" /><text x="630" y="80">12.1k</text>
+                  <circle cx="760" cy="74" r="5" /><text x="760" y="62">12.43k</text>
+                </g>
+
+                <g fill="#2E7D32" font-size="12" font-weight="800" text-anchor="middle">
+                  <circle cx="110" cy="174" r="5" /><text x="110" y="194">9.6k</text>
+                  <circle cx="240" cy="160" r="5" /><text x="240" y="180">10.0k</text>
+                  <circle cx="370" cy="146" r="5" /><text x="370" y="166">10.4k</text>
+                  <circle cx="500" cy="126" r="5" /><text x="500" y="146">10.9k</text>
+                  <circle cx="630" cy="108" r="5" /><text x="630" y="128">11.3k</text>
+                  <circle cx="760" cy="90" r="5" /><text x="760" y="110">11.8k</text>
+                </g>
+
+                <g fill="#D32F2F" font-size="12" font-weight="800" text-anchor="middle">
+                  <circle cx="110" cy="192" r="4.5" /><text x="110" y="212">980</text>
+                  <circle cx="240" cy="186" r="4.5" /><text x="240" y="206">935</text>
+                  <circle cx="370" cy="180" r="4.5" /><text x="370" y="200">912</text>
+                  <circle cx="500" cy="172" r="4.5" /><text x="500" y="192">888</text>
+                  <circle cx="630" cy="166" r="4.5" /><text x="630" y="186">866</text>
+                  <circle cx="760" cy="160" r="4.5" /><text x="760" y="180">847</text>
+                </g>
+
+                <g fill="#4B5563" font-size="13" text-anchor="middle">
+                  <text x="110" y="264">T12/25</text>
+                  <text x="240" y="264">T1</text>
+                  <text x="370" y="264">T2</text>
+                  <text x="500" y="264">T3</text>
+                  <text x="630" y="264">T4</text>
+                  <text x="760" y="264">T5</text>
+                </g>
+              </svg>
+              <div class="legend">
+                <span><span class="dot blue"></span>Tiếp nhận</span>
+                <span><span class="dot green"></span>Đã xử lý</span>
+                <span><span class="dot red"></span>Quá hạn</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="section-card">
           <div class="section-title">
-            <h3>XU HƯỚNG TOÀN HỆ THỐNG</h3>
-            <span>So sánh 4 tháng gần nhất</span>
-          </div>
-          <div class="trend-area">
-            <svg class="line-svg" viewBox="0 0 900 270" preserveAspectRatio="none" aria-label="Xu hướng toàn hệ thống">
-              <line x1="60" y1="220" x2="840" y2="220" stroke="#D5DCE5" stroke-width="1" />
-              <line x1="60" y1="40" x2="60" y2="220" stroke="#D5DCE5" stroke-width="1" />
-              <polyline fill="none" stroke="#1565C0" stroke-width="5" points="100,135 300,120 500,98 720,88" />
-              <polyline fill="none" stroke="#2E7D32" stroke-width="5" points="100,150 300,138 500,110 720,96" />
-              <polyline fill="none" stroke="#D32F2F" stroke-width="4" points="100,190 300,182 500,170 720,160" />
-              <circle cx="100" cy="135" r="6" fill="#1565C0" />
-              <circle cx="300" cy="120" r="6" fill="#1565C0" />
-              <circle cx="500" cy="98" r="6" fill="#1565C0" />
-              <circle cx="720" cy="88" r="6" fill="#1565C0" />
-              <circle cx="100" cy="150" r="6" fill="#2E7D32" />
-              <circle cx="300" cy="138" r="6" fill="#2E7D32" />
-              <circle cx="500" cy="110" r="6" fill="#2E7D32" />
-              <circle cx="720" cy="96" r="6" fill="#2E7D32" />
-              <circle cx="100" cy="190" r="5" fill="#D32F2F" />
-              <circle cx="300" cy="182" r="5" fill="#D32F2F" />
-              <circle cx="500" cy="170" r="5" fill="#D32F2F" />
-              <circle cx="720" cy="160" r="5" fill="#D32F2F" />
-              <text x="100" y="245" text-anchor="middle" fill="#4B5563" font-size="13">T1</text>
-              <text x="300" y="245" text-anchor="middle" fill="#4B5563" font-size="13">T2</text>
-              <text x="500" y="245" text-anchor="middle" fill="#4B5563" font-size="13">T3</text>
-              <text x="720" y="245" text-anchor="middle" fill="#4B5563" font-size="13">T4</text>
-            </svg>
-            <div class="legend">
-              <span><span class="dot blue"></span>Tiếp nhận</span>
-              <span><span class="dot green"></span>Xử lý</span>
-              <span><span class="dot red"></span>Quá hạn</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="portal-grid">
-          <div class="section-card">
-            <div class="section-title">
+            <div>
               <h3>XẾP HẠNG ĐƠN VỊ</h3>
-              <span>Top 5 đơn vị theo tỷ lệ đúng hạn</span>
-            </div>
-            <div class="ranking-list">
-              <div class="rank-item">
-                <div class="rank-main">
-                  <div class="rank-title">1. Cục A</div>
-                  <div class="rank-meta">Dẫn đầu khối với năng lực xử lý ổn định</div>
-                </div>
-                <span class="badge green">96%</span>
-              </div>
-              <div class="rank-item">
-                <div class="rank-main">
-                  <div class="rank-title">2. Vụ B</div>
-                  <div class="rank-meta">Tỷ lệ đúng hạn tăng đều 2 tháng liên tiếp</div>
-                </div>
-                <span class="badge green">94%</span>
-              </div>
-              <div class="rank-item">
-                <div class="rank-main">
-                  <div class="rank-title">3. TT C</div>
-                  <div class="rank-meta">Khối lượng tăng nhưng vẫn giữ nhịp xử lý tốt</div>
-                </div>
-                <span class="badge blue">92%</span>
-              </div>
-              <div class="rank-item">
-                <div class="rank-main">
-                  <div class="rank-title">4. Cục D</div>
-                  <div class="rank-meta">Đang cải thiện backlog trong tháng</div>
-                </div>
-                <span class="badge blue">90%</span>
-              </div>
-              <div class="rank-item">
-                <div class="rank-main">
-                  <div class="rank-title">5. Vụ E</div>
-                  <div class="rank-meta">Cần thêm nguồn lực để giữ mức ổn định</div>
-                </div>
-                <span class="badge amber">88%</span>
-              </div>
+              <p>Theo dõi đơn vị dẫn đầu và đơn vị cần lưu ý trong kỳ</p>
             </div>
           </div>
+          <div class="ranking-columns">
+            <div class="sub-card">
+              <h4>TOP 5 ĐƠN VỊ DẪN ĐẦU</h4>
+              <p>Xếp theo tỷ lệ đúng hạn và xu hướng cải thiện</p>
+              <div class="ranking-list">
+                <div class="rank-item">
+                  <div class="rank-main">
+                    <div class="rank-row"><div class="rank-title">Cục A</div><span class="badge green">96.2%</span></div>
+                    <div class="rank-desc">Số quá hạn thấp, xử lý ổn định toàn kỳ</div>
+                    <div class="rank-meta">Tăng 1 bậc so tháng trước</div>
+                  </div>
+                </div>
+                <div class="rank-item">
+                  <div class="rank-main">
+                    <div class="rank-row"><div class="rank-title">Vụ B</div><span class="badge green">94.1%</span></div>
+                    <div class="rank-desc">Duy trì năng lực điều phối đều giữa các nhóm việc</div>
+                    <div class="rank-meta">Giữ nguyên</div>
+                  </div>
+                </div>
+                <div class="rank-item">
+                  <div class="rank-main">
+                    <div class="rank-row"><div class="rank-title">TT Cải cách</div><span class="badge green">92.8%</span></div>
+                    <div class="rank-desc">Khối lượng tăng nhưng vẫn kiểm soát thời hạn tốt</div>
+                    <div class="rank-meta">Tăng 2 bậc</div>
+                  </div>
+                </div>
+                <div class="rank-item">
+                  <div class="rank-main">
+                    <div class="rank-row"><div class="rank-title">Cục Dữ liệu</div><span class="badge blue">90.5%</span></div>
+                    <div class="rank-desc">Có giảm nhẹ thứ hạng nhưng vẫn thuộc nhóm tốt</div>
+                    <div class="rank-meta">Giảm 1 bậc</div>
+                  </div>
+                </div>
+                <div class="rank-item">
+                  <div class="rank-main">
+                    <div class="rank-row"><div class="rank-title">Vụ Tổng hợp</div><span class="badge amber">88.3%</span></div>
+                    <div class="rank-desc">Cần giữ nhịp khi lượng việc tiếp tục tăng</div>
+                    <div class="rank-meta">Giảm 1 bậc</div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-          <div class="section-card">
-            <div class="section-title">
-              <h3>CẢNH BÁO ĐIỀU HÀNH</h3>
-              <span>Các điểm cần chỉ đạo</span>
+            <div class="sub-card">
+              <h4>BOTTOM 3 ĐƠN VỊ CẦN LƯU Ý</h4>
+              <p>Hiển thị tỷ lệ đúng hạn, số quá hạn và mức độ cảnh báo</p>
+              <div class="ranking-list">
+                <div class="rank-item">
+                  <div class="rank-main">
+                    <div class="rank-row"><div class="rank-title">Vụ KHTC</div><span class="badge red">Rất cao</span></div>
+                    <div class="rank-desc">Tỷ lệ đúng hạn 85.8% • 14.2% quá hạn</div>
+                    <div class="rank-meta">Xu hướng: giảm bậc, cần theo dõi sát</div>
+                  </div>
+                </div>
+                <div class="rank-item">
+                  <div class="rank-main">
+                    <div class="rank-row"><div class="rank-title">TT Bồi dưỡng</div><span class="badge red">Cao</span></div>
+                    <div class="rank-desc">Tỷ lệ đúng hạn 88.2% • 11.8% quá hạn</div>
+                    <div class="rank-meta">Xu hướng: giảm bậc, cần xử lý backlog</div>
+                  </div>
+                </div>
+                <div class="rank-item">
+                  <div class="rank-main">
+                    <div class="rank-row"><div class="rank-title">Cục CNTT</div><span class="badge amber">Cần xử lý</span></div>
+                    <div class="rank-desc">Tỷ lệ đúng hạn 89.5% • 10.5% quá hạn</div>
+                    <div class="rank-meta">Xu hướng: giảm bậc do backlog tăng</div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="alert-list">
-              <div class="alert-item">
-                <div class="alert-main">
-                  <div class="alert-title">03 đơn vị có tỷ lệ quá hạn &gt; 10%</div>
-                  <div class="alert-meta">Ưu tiên kiểm tra nguyên nhân tồn đọng và phân luồng xử lý</div>
-                </div>
-                <span class="badge red">Khẩn</span>
-              </div>
-              <div class="alert-item">
-                <div class="alert-main">
-                  <div class="alert-title">02 đơn vị backlog tăng mạnh</div>
-                  <div class="alert-meta">Khối lượng hồ sơ tăng bất thường so với cùng kỳ</div>
-                </div>
-                <span class="badge amber">Theo dõi</span>
-              </div>
-              <div class="alert-item">
-                <div class="alert-main">
-                  <div class="alert-title">01 đơn vị chưa cập nhật tiến độ đúng hạn</div>
-                  <div class="alert-meta">Cần nhắc cập nhật dữ liệu dashboard trước giao ban</div>
-                </div>
-                <span class="badge blue">Nhắc việc</span>
-              </div>
-            </div>
-            <div style="margin-top: 16px;"><button class="cta-btn">Xem chi tiết điều hành</button></div>
           </div>
         </div>
 
-        <div class="two-col">
+        <div class="grid-equal">
           <div class="section-card">
             <div class="section-title">
-              <h3>SO SÁNH KHỐI / NHÓM ĐƠN VỊ</h3>
-              <span>Hiệu quả xử lý theo nhóm</span>
+              <div>
+                <h3>SO SÁNH HIỆU QUẢ THEO KHỐI</h3>
+                <p>Biểu đồ cột ngang theo tỷ lệ đúng hạn</p>
+              </div>
             </div>
-            <div class="bar-compare">
+            <div class="bar-compare" aria-label="Biểu đồ hiệu quả theo khối đơn vị">
               <div class="bar-row">
                 <div class="bar-label">Khối Bộ</div>
                 <div class="bar-track"><div class="bar-fill" style="width: 95%;"></div></div>
@@ -693,33 +1340,85 @@
           </div>
 
           <div class="insight-box">
-            <p>Tháng này toàn Bộ tiếp nhận 12.430 văn bản, xử lý đúng hạn đạt 91,6%, số quá hạn giảm 15% so với tháng trước.</p>
-            <div class="highlight-list">
-              <div>• Tỷ lệ đúng hạn tăng 2.1% ở toàn hệ thống</div>
-              <div>• Cục A đang đứng đầu bảng xếp hạng tháng</div>
-              <div>• Vụ D là đơn vị cần được lưu ý thêm trong giao ban</div>
+            <div class="insight-header">
+              <h3>INSIGHT THÁNG NÀY</h3>
+              <span class="insight-chip">Đã duyệt • Phiên bản 2</span>
+            </div>
+            <div class="insight-list" id="insight-copy-source">
+              <div class="insight-item"><span class="insight-symbol pos">+</span><div>Tổng VB đến tháng 5 tăng 8,2% so tháng 4, đạt mức cao nhất trong 6 tháng qua.</div></div>
+              <div class="insight-item"><span class="insight-symbol pos">+</span><div>Tỷ lệ đúng hạn toàn Bộ đạt 91,6%, cải thiện 2,1 điểm % so tháng trước.</div></div>
+              <div class="insight-item"><span class="insight-symbol neg">-</span><div>Ba đơn vị có tỷ lệ quá hạn vượt ngưỡng 10%: Vụ KHTC (14,2%), TT Bồi dưỡng (11,8%), Cục CNTT (10,5%).</div></div>
+              <div class="insight-item"><span class="insight-symbol neu">~</span><div>Phiếu giao việc tăng 4,7%, tờ trình tăng 2,1% — phản ánh khối lượng công việc đang tăng đều.</div></div>
+            </div>
+            <div class="insight-forecast">
+              <div>
+                <div class="forecast-col-title blue">Dự báo tháng tới</div>
+                <ul class="forecast-bullets blue">
+                  <li>VB đến dự kiến tăng thêm 6–8% nếu xu hướng hiện tại duy trì</li>
+                  <li>Tỷ lệ đúng hạn có thể đạt 93% nếu 3 đơn vị cảnh báo được xử lý</li>
+                  <li>Phiếu giao việc dự kiến vượt 3,600 nếu khối lượng công việc tiếp tục tăng</li>
+                </ul>
+              </div>
+              <div>
+                <div class="forecast-col-title green">Đề xuất chỉ đạo</div>
+                <ul class="forecast-bullets green">
+                  <li>Yêu cầu Vụ KHTC báo cáo kế hoạch xử lý backlog trong 3 ngày tới</li>
+                  <li>Tổ chức họp đánh giá tiến độ với 3 đơn vị cảnh báo cao trước 15/05</li>
+                  <li>Xem xét điều phối nguồn lực từ khối Bộ hỗ trợ khối TT đang có tỷ lệ thấp nhất</li>
+                </ul>
+              </div>
+            </div>
+            <button class="action-btn" id="copyInsightBtn" type="button" style="margin-top:16px;">Sao chép nội dung insight</button>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-title">
+            <div>
+              <h3>PHÂN TÍCH THEO LOẠI NGHIỆP VỤ</h3>
+              <p>Tỷ lệ đúng hạn và khối lượng riêng từng loại — tháng 5/2026</p>
+            </div>
+          </div>
+          <div class="biz-type-grid" aria-label="Phân tích theo loại nghiệp vụ">
+            <div class="biz-card blue">
+              <div class="biz-card-label">Văn bản đến</div>
+              <div class="biz-card-value">12,430</div>
+              <div class="biz-card-rate">Đúng hạn: 91.2%</div>
+              <div class="biz-card-sub">+8.2% so tháng trước • 847 quá hạn</div>
+            </div>
+            <div class="biz-card green">
+              <div class="biz-card-label">Văn bản đi</div>
+              <div class="biz-card-value">8,214</div>
+              <div class="biz-card-rate">Đúng hạn: 94.6%</div>
+              <div class="biz-card-sub">+5.4% so tháng trước • 312 quá hạn</div>
+            </div>
+            <div class="biz-card amber">
+              <div class="biz-card-label">Tờ trình</div>
+              <div class="biz-card-value">1,082</div>
+              <div class="biz-card-rate">Đúng hạn: 87.4%</div>
+              <div class="biz-card-sub">+2.1% so tháng trước • 136 quá hạn</div>
+            </div>
+            <div class="biz-card blue">
+              <div class="biz-card-label">Phiếu giao việc</div>
+              <div class="biz-card-value">3,408</div>
+              <div class="biz-card-rate">Đúng hạn: 89.8%</div>
+              <div class="biz-card-sub">+4.7% so tháng trước • 347 quá hạn</div>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <section id="tab-cong-khai" class="tab-panel" role="tabpanel">
+    <section id="tab-cong-khai" class="tab-panel" role="tabpanel" aria-labelledby="tab-cong-khai">
       <div class="dashboard-section">
-        <div class="section-card">
-          <div class="dashboard-header">
-            <div>
-              <h2>CỔNG THÔNG TIN TỔNG HỢP HỒ SƠ / VĂN BẢN</h2>
-              <p>Giao diện công khai tối giản, tập trung minh bạch số liệu an toàn và hỗ trợ tra cứu nhanh.</p>
-            </div>
-            <div class="filters">
-              <div class="filter-pill">Cập nhật định kỳ</div>
-              <div class="filter-pill">Dữ liệu tổng hợp</div>
-            </div>
+        <div class="hero">
+          <div>
+            <h2>CỔNG THÔNG TIN TỔNG HỢP HỒ SƠ / VĂN BẢN</h2>
+            <p>Tra cứu trạng thái xử lý hồ sơ theo mã — dữ liệu tổng hợp định kỳ</p>
           </div>
         </div>
 
-        <div class="kpi-grid">
+        <div class="kpi-grid public-grid" aria-label="Các chỉ số tổng quan công khai">
           <div class="kpi-card">
             <div class="kpi-label">Tổng hồ sơ tiếp nhận</div>
             <div class="kpi-value">45,320</div>
@@ -727,12 +1426,14 @@
           <div class="kpi-card warning">
             <div class="kpi-label">Đang xử lý</div>
             <div class="kpi-value">3,241</div>
+            <div class="kpi-delta">Chỉ số tổng hợp an toàn</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-label">Đã hoàn thành</div>
             <div class="kpi-value">41,102</div>
+            <div class="kpi-delta">+6.3%</div>
           </div>
-          <div class="kpi-card highlight">
+          <div class="kpi-card success">
             <div class="kpi-label">Tỷ lệ đúng hạn</div>
             <div class="kpi-value">92.4%</div>
           </div>
@@ -740,68 +1441,232 @@
 
         <div class="section-card">
           <div class="section-title">
-            <h3>TRA CỨU NHANH</h3>
-            <span>Tìm theo mã hồ sơ hoặc mã văn bản</span>
+            <div>
+              <h3>TRA CỨU NHANH</h3>
+              <p>Tra cứu trạng thái tổng quát theo mã hồ sơ hoặc mã văn bản</p>
+            </div>
           </div>
           <div class="search-box">
-            <input class="search-input" type="text" placeholder="Nhập mã hồ sơ / mã văn bản" />
-            <button class="search-btn">Tra cứu</button>
+            <input id="publicSearchInput" class="search-input" type="text" placeholder="Nhập mã hồ sơ hoặc mã văn bản (ví dụ: HS-2026-001245)" aria-label="Nhập mã hồ sơ hoặc mã văn bản" />
+            <button id="publicSearchBtn" class="search-btn" type="button">Tra cứu</button>
+          </div>
+          <div style="margin-top:10px; padding:10px 14px; background:#f8fbff; border:1px solid var(--border); border-radius:10px; font-size:13px; color:var(--muted);">
+            <strong style="color:var(--text);">Định dạng mã hợp lệ:</strong>
+            <span style="margin-left:8px;">HS-YYYY-XXXXXX</span>
+            <span style="margin-left:12px;">VB-YYYY-XXXXXX</span>
+            <span style="margin-left:12px;">HSXXXXXX</span>
+            <span style="margin-left:12px; color:var(--blue);">Ví dụ: HS-2026-001245</span>
+          </div>
+          <div id="searchFeedback" class="search-feedback" aria-live="polite">Không tìm thấy dữ liệu phù hợp với mã đã nhập.</div>
+          <div id="searchResultCard" class="search-result-card" aria-live="polite">
+            <div class="result-header">
+              <div>
+                <div class="result-code">Mã tra cứu: <span id="searchResultCode">HS-2026-001245</span></div>
+              </div>
+              <span class="badge green">Đang xử lý đúng hạn</span>
+            </div>
+            <div class="result-grid">
+              <div class="result-item">
+                <div class="result-label">Loại hồ sơ</div>
+                <div class="result-value">Hồ sơ hành chính</div>
+              </div>
+              <div class="result-item">
+                <div class="result-label">Ngày tiếp nhận</div>
+                <div class="result-value">15/04/2026</div>
+              </div>
+              <div class="result-item">
+                <div class="result-label">Dự kiến hoàn thành</div>
+                <div class="result-value">15/05/2026</div>
+              </div>
+              <div class="result-item">
+                <div class="result-label">Trạng thái</div>
+                <div class="result-value">Đang xử lý</div>
+              </div>
+              <div class="result-item">
+                <div class="result-label">Đơn vị tiếp nhận</div>
+                <div class="result-value">Vụ Tổng hợp</div>
+              </div>
+              <div class="result-item">
+                <div class="result-label">Ghi chú</div>
+                <div class="result-value">Đang trong thời hạn xử lý</div>
+              </div>
+            </div>
+          </div>
+          <div class="faq-list">
+            <div class="faq-item">
+              <div class="faq-q">Tôi không tìm thấy mã hồ sơ của mình?</div>
+              <div class="faq-a">Dữ liệu được cập nhật định kỳ mỗi 30 phút. Nếu hồ sơ mới nộp trong vòng 1 giờ, vui lòng thử lại sau hoặc liên hệ bộ phận hỗ trợ.</div>
+            </div>
+            <div class="faq-item">
+              <div class="faq-q">Tại sao không hiển thị tên cán bộ xử lý?</div>
+              <div class="faq-a">Cổng công khai chỉ hiển thị thông tin trạng thái tổng quát để bảo vệ thông tin cá nhân và quy trình nội bộ theo quy định bảo mật.</div>
+            </div>
+            <div class="faq-item">
+              <div class="faq-q">Mã hồ sơ tôi nhận được ở đâu?</div>
+              <div class="faq-a">Mã hồ sơ được cấp khi nộp hồ sơ tại bộ phận một cửa hoặc qua hệ thống trực tuyến. Định dạng: HS-YYYY-XXXXXX hoặc VB-YYYY-XXXXXX.</div>
+            </div>
           </div>
         </div>
 
-        <div class="mini-split">
+        <div class="legal-box">⚠ Lưu ý về phạm vi dữ liệu: Tính năng tra cứu công khai đang trong giai đoạn thử nghiệm nội bộ. Chỉ hiển thị thông tin trạng thái tổng quát, không bao gồm nội dung văn bản, tên cán bộ xử lý, ý kiến chỉ đạo hoặc tài liệu đính kèm. Số liệu được tổng hợp định kỳ và có thể chậm hơn thực tế tối đa 30 phút.</div>
+
+        <div class="public-chart-grid">
           <div class="section-card">
             <div class="section-title">
-              <h3>XU HƯỚNG THEO THÁNG</h3>
-              <span>Minh họa biến động tổng số hồ sơ</span>
+              <div>
+                <h3>XU HƯỚNG TIẾP NHẬN HỒ SƠ</h3>
+                <p>Theo dõi tổng hồ sơ tiếp nhận 6 tháng đầu năm 2026</p>
+              </div>
             </div>
-            <div class="trend-area">
-              <svg class="line-svg" viewBox="0 0 700 260" preserveAspectRatio="none" aria-label="Xu hướng hồ sơ theo tháng">
-                <line x1="50" y1="210" x2="650" y2="210" stroke="#D5DCE5" stroke-width="1" />
-                <polyline fill="none" stroke="#1565C0" stroke-width="5" points="70,185 170,170 270,150 370,126 470,102 570,96" />
-                <circle cx="70" cy="185" r="6" fill="#1565C0" />
-                <circle cx="170" cy="170" r="6" fill="#1565C0" />
-                <circle cx="270" cy="150" r="6" fill="#1565C0" />
-                <circle cx="370" cy="126" r="6" fill="#1565C0" />
-                <circle cx="470" cy="102" r="6" fill="#1565C0" />
-                <circle cx="570" cy="96" r="6" fill="#1565C0" />
-                <text x="70" y="238" text-anchor="middle" fill="#4B5563" font-size="13">T1</text>
-                <text x="170" y="238" text-anchor="middle" fill="#4B5563" font-size="13">T2</text>
-                <text x="270" y="238" text-anchor="middle" fill="#4B5563" font-size="13">T3</text>
-                <text x="370" y="238" text-anchor="middle" fill="#4B5563" font-size="13">T4</text>
-                <text x="470" y="238" text-anchor="middle" fill="#4B5563" font-size="13">T5</text>
-                <text x="570" y="238" text-anchor="middle" fill="#4B5563" font-size="13">T6</text>
+            <div class="chart-wrap">
+              <svg class="line-svg" viewBox="0 0 760 290" preserveAspectRatio="none" aria-label="Biểu đồ xu hướng tiếp nhận hồ sơ theo tháng">
+                <line x1="60" y1="225" x2="710" y2="225" stroke="#D5DCE5" stroke-width="1" />
+                <line x1="60" y1="50" x2="60" y2="225" stroke="#D5DCE5" stroke-width="1" />
+                <polyline fill="none" stroke="#1565C0" stroke-width="4" points="95,180 200,160 305,145 410,126 515,108 620,92" />
+                <g fill="#1565C0" font-size="12" font-weight="800" text-anchor="middle">
+                  <circle cx="95" cy="180" r="5" /><text x="95" y="168">6,200</text>
+                  <circle cx="200" cy="160" r="5" /><text x="200" y="148">6,800</text>
+                  <circle cx="305" cy="145" r="5" /><text x="305" y="133">7,100</text>
+                  <circle cx="410" cy="126" r="5" /><text x="410" y="114">7,400</text>
+                  <circle cx="515" cy="108" r="5" /><text x="515" y="96">7,800</text>
+                  <circle cx="620" cy="92" r="5" /><text x="620" y="80">8,100</text>
+                </g>
+                <g fill="#4B5563" font-size="13" text-anchor="middle">
+                  <text x="95" y="248">T1/2026</text>
+                  <text x="200" y="248">T2/2026</text>
+                  <text x="305" y="248">T3/2026</text>
+                  <text x="410" y="248">T4/2026</text>
+                  <text x="515" y="248">T5/2026</text>
+                  <text x="620" y="248">T6/2026</text>
+                </g>
               </svg>
+              <div class="legend">
+                <span><span class="dot blue"></span>Tổng hồ sơ tiếp nhận</span>
+              </div>
             </div>
           </div>
 
           <div class="section-card">
             <div class="section-title">
-              <h3>TỶ LỆ XỬ LÝ</h3>
-              <span>Chỉ số công khai mức tổng hợp</span>
+              <div>
+                <h3>TỶ LỆ XỬ LÝ</h3>
+                <p>Biểu diễn theo nhóm trạng thái công khai an toàn</p>
+              </div>
             </div>
             <div class="progress-stack">
               <div class="progress-card">
-                <div class="progress-title">Đúng hạn — 92%</div>
+                <div class="progress-title">Đúng hạn: 92.4%</div>
                 <div class="progress-track"><div class="progress-fill green"></div></div>
-                <div class="rank-meta">Phần lớn hồ sơ được hoàn thành trong hạn xử lý.</div>
               </div>
               <div class="progress-card">
-                <div class="progress-title">Quá hạn — 8%</div>
+                <div class="progress-title">Quá hạn: 7.6%</div>
                 <div class="progress-track"><div class="progress-fill amber"></div></div>
-                <div class="rank-meta">Số liệu tổng hợp định kỳ, không hiển thị chi tiết nội bộ.</div>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="public-note">
-          Số liệu được tổng hợp định kỳ, không bao gồm thông tin nghiệp vụ nhạy cảm, danh sách hồ sơ nội bộ hoặc chi tiết điều hành theo cá nhân/đơn vị.
+        <div class="section-card">
+          <div class="section-title">
+            <div>
+              <h3>BẢNG THỐNG KÊ 6 THÁNG</h3>
+              <p>Số liệu tiếp nhận, hoàn thành và tỷ lệ đúng hạn tăng dần</p>
+            </div>
+          </div>
+          <div class="update-note">
+            <span class="update-dot"></span>
+            Cập nhật lần cuối: 07/05/2026 09:00 — Dữ liệu tổng hợp định kỳ, có thể chậm tối đa 30 phút
+          </div>
+          <div class="stats-table-wrap">
+            <table aria-label="Bảng thống kê 6 tháng hồ sơ công khai">
+              <thead>
+                <tr>
+                  <th scope="col">Tháng</th>
+                  <th scope="col">Tiếp nhận</th>
+                  <th scope="col">Tăng/Giảm %</th>
+                  <th scope="col">Hoàn thành</th>
+                  <th scope="col">Tỷ lệ đúng hạn</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>T1/2026</td>
+                  <td>6,200</td>
+                  <td><span class="delta-up">—</span></td>
+                  <td>5,740</td>
+                  <td><div class="rate-inline"><div class="rate-track"><div class="rate-fill" style="width: 90.2%;"></div></div><span class="rate-text">90.2%</span></div></td>
+                </tr>
+                <tr>
+                  <td>T2/2026</td>
+                  <td>6,800</td>
+                  <td><span class="delta-up">+9.7%</span></td>
+                  <td>6,260</td>
+                  <td><div class="rate-inline"><div class="rate-track"><div class="rate-fill" style="width: 91.1%;"></div></div><span class="rate-text">91.1%</span></div></td>
+                </tr>
+                <tr>
+                  <td>T3/2026</td>
+                  <td>7,100</td>
+                  <td><span class="delta-up">+4.4%</span></td>
+                  <td>6,590</td>
+                  <td><div class="rate-inline"><div class="rate-track"><div class="rate-fill" style="width: 91.6%;"></div></div><span class="rate-text">91.6%</span></div></td>
+                </tr>
+                <tr>
+                  <td>T4/2026</td>
+                  <td>7,400</td>
+                  <td><span class="delta-up">+4.2%</span></td>
+                  <td>6,930</td>
+                  <td><div class="rate-inline"><div class="rate-track"><div class="rate-fill" style="width: 92.0%;"></div></div><span class="rate-text">92.0%</span></div></td>
+                </tr>
+                <tr>
+                  <td>T5/2026</td>
+                  <td>7,800</td>
+                  <td><span class="delta-up">+5.4%</span></td>
+                  <td>7,290</td>
+                  <td><div class="rate-inline"><div class="rate-track"><div class="rate-fill" style="width: 92.3%;"></div></div><span class="rate-text">92.3%</span></div></td>
+                </tr>
+                <tr>
+                  <td>T6/2026</td>
+                  <td>8,100</td>
+                  <td><span class="delta-up">+3.8%</span></td>
+                  <td>7,620</td>
+                  <td><div class="rate-inline"><div class="rate-track"><div class="rate-fill" style="width: 92.4%;"></div></div><span class="rate-text">92.4%</span></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
+
+        <div class="section-card">
+          <div class="section-title">
+            <div>
+              <h3>THÔNG TIN LIÊN HỆ HỖ TRỢ</h3>
+              <p>Liên hệ khi cần hỗ trợ tra cứu hoặc có thắc mắc về hồ sơ</p>
+            </div>
+          </div>
+          <div class="contact-grid" aria-label="Thông tin liên hệ hỗ trợ">
+            <div class="contact-card">
+              <div class="contact-label">Điện thoại hỗ trợ</div>
+              <div class="contact-value">024 2220 2828</div>
+              <div class="contact-sub">Thứ 2 – Thứ 6 • 08:00 – 17:00</div>
+            </div>
+            <div class="contact-card">
+              <div class="contact-label">Email hỗ trợ</div>
+              <div class="contact-value">hotro.qlvb@mof.gov.vn</div>
+              <div class="contact-sub">Phản hồi trong vòng 1 ngày làm việc</div>
+            </div>
+            <div class="contact-card">
+              <div class="contact-label">Bộ phận một cửa</div>
+              <div class="contact-value">Tầng 1 — 28 Trần Hưng Đạo</div>
+              <div class="contact-sub">Thứ 2 – Thứ 6 • 08:00 – 16:30</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="public-note">Số liệu được tổng hợp định kỳ, không bao gồm thông tin nghiệp vụ nhạy cảm, danh sách hồ sơ nội bộ hoặc chi tiết điều hành theo cá nhân/đơn vị.</div>
       </div>
     </section>
 
-    <div class="footer-note">Tệp mockup độc lập HTML5, không dùng thư viện ngoài.</div>
+    <div class="footer-note">Tệp mockup HTML5 độc lập — Dashboard Portal read-only phục vụ theo dõi tổng quan và tra cứu công khai</div>
   </div>
 
   <script>
@@ -825,6 +1690,65 @@
           document.getElementById(target).classList.add('active');
         });
       });
+
+      const searchBtn = document.getElementById('publicSearchBtn');
+      const searchInput = document.getElementById('publicSearchInput');
+      const resultCard = document.getElementById('searchResultCard');
+      const resultCode = document.getElementById('searchResultCode');
+      const searchFeedback = document.getElementById('searchFeedback');
+      const copyInsightBtn = document.getElementById('copyInsightBtn');
+      const insightSource = document.getElementById('insight-copy-source');
+      const knownCodes = ['HS-2026-001245', 'VB-2026-001245', 'HS001245'];
+
+      if (searchBtn && searchInput && resultCard && resultCode && searchFeedback) {
+        const runSearch = () => {
+          const inputValue = searchInput.value.trim();
+          const normalized = inputValue.toUpperCase();
+
+          if (!inputValue) {
+            resultCard.classList.remove('visible');
+            searchFeedback.classList.add('visible');
+            searchFeedback.textContent = 'Không tìm thấy dữ liệu phù hợp với mã đã nhập.';
+            return;
+          }
+
+          if (knownCodes.includes(normalized)) {
+            resultCode.textContent = inputValue;
+            resultCard.classList.add('visible');
+            searchFeedback.classList.remove('visible');
+          } else {
+            resultCard.classList.remove('visible');
+            searchFeedback.classList.add('visible');
+            searchFeedback.textContent = 'Không tìm thấy dữ liệu phù hợp với mã đã nhập.';
+          }
+        };
+
+        searchBtn.addEventListener('click', runSearch);
+        searchInput.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            runSearch();
+          }
+        });
+      }
+
+      if (copyInsightBtn && insightSource) {
+        copyInsightBtn.addEventListener('click', async () => {
+          const text = Array.from(insightSource.querySelectorAll('.insight-item div'))
+            .map((item) => '- ' + item.textContent.trim())
+            .join('\n');
+
+          try {
+            await navigator.clipboard.writeText(text);
+            copyInsightBtn.textContent = 'Đã sao chép nội dung insight';
+          } catch (error) {
+            copyInsightBtn.textContent = 'Không sao chép được';
+          }
+
+          setTimeout(() => {
+            copyInsightBtn.textContent = 'Sao chép nội dung insight';
+          }, 1800);
+        });
+      }
     })();
   </script>
 </body>
