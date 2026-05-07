@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Portal QLVB - Bộ Tài chính</title>
+  <style>
+    :root {
+      --green: #2E7D32;
+      --amber: #F9A825;
+      --red: #D32F2F;
+      --blue: #1565C0;
+      --bg: #F5F7FA;
+      --card: #FFFFFF;
+      --text: #1F2937;
+      --muted: #6B7280;
+      --border: #E5E7EB;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(circle at top, #ffffff 0%, #f5f7fa 55%, #edf2f7 100%);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #0f4c9b 0%, #1565C0 40%, #1f7ae0 100%);
+      color: #fff;
+      border-radius: 24px;
+      padding: 28px 32px;
+      box-shadow: 0 16px 40px rgba(21, 101, 192, 0.22);
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: 0.3px;
+    }
+
+    .hero p {
+      margin: 10px 0 0;
+      font-size: 15px;
+      color: rgba(255,255,255,0.9);
+      max-width: 760px;
+    }
+
+    .hero-badge {
+      white-space: nowrap;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.2);
+      font-weight: 700;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .tab-button {
+      border: 1px solid rgba(21, 101, 192, 0.12);
+      background: rgba(255,255,255,0.96);
+      color: var(--muted);
+      padding: 14px 18px;
+      border-radius: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+      transition: all 0.2s ease;
+    }
+
+    .tab-button.active {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .dashboard-section {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .section-card {
+      background: rgba(255,255,255,0.96);
+      border: 1px solid rgba(255,255,255,0.6);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      backdrop-filter: blur(4px);
+    }
+
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .dashboard-header h2 {
+      margin: 0;
+      font-size: 30px;
+    }
+
+    .dashboard-header p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .filters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .filter-pill {
+      padding: 10px 14px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .kpi-card {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border: 1px solid #e4ecf5;
+      border-radius: 18px;
+      padding: 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -20px -30px auto;
+      width: 110px;
+      height: 110px;
+      background: rgba(21, 101, 192, 0.06);
+      border-radius: 50%;
+    }
+
+    .kpi-label {
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .kpi-value {
+      font-size: 34px;
+      line-height: 1.1;
+      font-weight: 800;
+      margin-bottom: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .kpi-delta {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--blue);
+      position: relative;
+      z-index: 1;
+    }
+
+    .kpi-card.highlight .kpi-value { color: var(--green); }
+    .kpi-card.warning .kpi-value, .kpi-card.warning .kpi-delta { color: #9A6700; }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .section-title h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .section-title span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .two-col,
+    .portal-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 20px;
+    }
+
+    .ranking-list,
+    .alert-list,
+    .highlight-list,
+    .note-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .rank-item,
+    .alert-item,
+    .note-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .rank-item:last-child,
+    .alert-item:last-child,
+    .note-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .rank-main,
+    .alert-main {
+      min-width: 0;
+    }
+
+    .rank-title,
+    .alert-title {
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .rank-meta,
+    .alert-meta,
+    .note-item {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .badge.green { background: rgba(46, 125, 50, 0.12); color: var(--green); }
+    .badge.amber { background: rgba(249, 168, 37, 0.18); color: #9A6700; }
+    .badge.red { background: rgba(211, 47, 47, 0.12); color: var(--red); }
+    .badge.blue { background: rgba(21, 101, 192, 0.12); color: var(--blue); }
+
+    .trend-area {
+      border-top: 1px solid var(--border);
+      padding-top: 18px;
+      margin-top: 12px;
+    }
+
+    .line-svg {
+      width: 100%;
+      height: 270px;
+      display: block;
+      background: linear-gradient(180deg, rgba(21,101,192,0.04), rgba(255,255,255,0));
+      border-radius: 14px;
+    }
+
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .dot.blue { background: var(--blue); }
+    .dot.green { background: var(--green); }
+    .dot.red { background: var(--red); }
+    .dot.amber { background: var(--amber); }
+
+    .bar-compare {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 10px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 150px 1fr 60px;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .bar-track {
+      width: 100%;
+      height: 14px;
+      background: #E8EDF3;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #1565C0, #3c8bf0);
+    }
+
+    .bar-label,
+    .bar-value {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .search-box {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .search-input {
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 15px;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .search-btn,
+    .cta-btn {
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: none;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(21, 101, 192, 0.18);
+    }
+
+    .insight-box {
+      background: linear-gradient(135deg, rgba(46, 125, 50, 0.08), rgba(21, 101, 192, 0.08));
+      border: 1px solid rgba(46, 125, 50, 0.12);
+      border-radius: 18px;
+      padding: 22px;
+    }
+
+    .insight-box p {
+      margin: 0 0 12px;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .highlight-list div {
+      font-size: 14px;
+    }
+
+    .public-note {
+      background: rgba(21, 101, 192, 0.05);
+      border: 1px dashed rgba(21, 101, 192, 0.24);
+      border-radius: 14px;
+      padding: 16px 18px;
+      color: #38506d;
+      font-size: 14px;
+    }
+
+    .mini-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .progress-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 10px;
+    }
+
+    .progress-card {
+      padding: 16px 18px;
+      border-radius: 14px;
+      background: #fff;
+      border: 1px solid var(--border);
+    }
+
+    .progress-title {
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    .progress-track {
+      height: 14px;
+      border-radius: 999px;
+      background: #E8EDF3;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-fill.green { background: var(--green); height: 100%; width: 92%; }
+    .progress-fill.amber { background: var(--amber); height: 100%; width: 8%; }
+
+    .footer-note {
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+    }
+
+    @media (max-width: 1200px) {
+      .kpi-grid,
+      .two-col,
+      .portal-grid,
+      .mini-split {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 900px) {
+      .hero,
+      .dashboard-header {
+        flex-direction: column;
+      }
+
+      .kpi-grid,
+      .two-col,
+      .portal-grid,
+      .mini-split,
+      .search-box {
+        grid-template-columns: 1fr;
+      }
+
+      .bar-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      body { background: #fff; }
+      .page { max-width: none; padding: 8px; }
+      .tab-panel { display: block !important; page-break-after: always; }
+      .tab-panel:last-child { page-break-after: auto; }
+      .section-card, .hero { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <div>
+        <h1>Portal Dashboard QLVB Bộ Tài chính</h1>
+        <p>Mockup giao diện Portal thiên về trình bày đẹp, sáng, ít thao tác; phù hợp chiếu màn hình, báo cáo giao ban và công bố chỉ số tổng hợp.</p>
+      </div>
+      <div class="hero-badge">Portal nội bộ cấp cao + Portal công khai tối giản</div>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Chọn dashboard portal">
+      <button class="tab-button active" data-tab="tab-noi-bo" role="tab" aria-selected="true">Portal nội bộ cấp cao</button>
+      <button class="tab-button" data-tab="tab-cong-khai" role="tab" aria-selected="false">Portal công khai tối giản</button>
+    </div>
+
+    <section id="tab-noi-bo" class="tab-panel active" role="tabpanel">
+      <div class="dashboard-section">
+        <div class="section-card">
+          <div class="dashboard-header">
+            <div>
+              <h2>PORTAL ĐIỀU HÀNH BỘ TÀI CHÍNH</h2>
+              <p>Bức tranh tổng quan toàn hệ thống quản lý văn bản để lãnh đạo cấp Bộ theo dõi nhanh.</p>
+            </div>
+            <div class="filters">
+              <div class="filter-pill">Tháng này ▼</div>
+              <div class="filter-pill">Toàn Bộ</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Tổng VB đến</div>
+            <div class="kpi-value">12,430</div>
+            <div class="kpi-delta">+8.2% so với tháng trước</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Tổng VB đi</div>
+            <div class="kpi-value">8,214</div>
+            <div class="kpi-delta">+5.4% so với tháng trước</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Tổng tờ trình</div>
+            <div class="kpi-value">1,082</div>
+            <div class="kpi-delta">+2.1% theo chu kỳ báo cáo</div>
+          </div>
+          <div class="kpi-card highlight">
+            <div class="kpi-label">Tỷ lệ đúng hạn</div>
+            <div class="kpi-value">91.6%</div>
+            <div class="kpi-delta">Tăng 2.1% so với tháng trước</div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-title">
+            <h3>XU HƯỚNG TOÀN HỆ THỐNG</h3>
+            <span>So sánh 4 tháng gần nhất</span>
+          </div>
+          <div class="trend-area">
+            <svg class="line-svg" viewBox="0 0 900 270" preserveAspectRatio="none" aria-label="Xu hướng toàn hệ thống">
+              <line x1="60" y1="220" x2="840" y2="220" stroke="#D5DCE5" stroke-width="1" />
+              <line x1="60" y1="40" x2="60" y2="220" stroke="#D5DCE5" stroke-width="1" />
+              <polyline fill="none" stroke="#1565C0" stroke-width="5" points="100,135 300,120 500,98 720,88" />
+              <polyline fill="none" stroke="#2E7D32" stroke-width="5" points="100,150 300,138 500,110 720,96" />
+              <polyline fill="none" stroke="#D32F2F" stroke-width="4" points="100,190 300,182 500,170 720,160" />
+              <circle cx="100" cy="135" r="6" fill="#1565C0" />
+              <circle cx="300" cy="120" r="6" fill="#1565C0" />
+              <circle cx="500" cy="98" r="6" fill="#1565C0" />
+              <circle cx="720" cy="88" r="6" fill="#1565C0" />
+              <circle cx="100" cy="150" r="6" fill="#2E7D32" />
+              <circle cx="300" cy="138" r="6" fill="#2E7D32" />
+              <circle cx="500" cy="110" r="6" fill="#2E7D32" />
+              <circle cx="720" cy="96" r="6" fill="#2E7D32" />
+              <circle cx="100" cy="190" r="5" fill="#D32F2F" />
+              <circle cx="300" cy="182" r="5" fill="#D32F2F" />
+              <circle cx="500" cy="170" r="5" fill="#D32F2F" />
+              <circle cx="720" cy="160" r="5" fill="#D32F2F" />
+              <text x="100" y="245" text-anchor="middle" fill="#4B5563" font-size="13">T1</text>
+              <text x="300" y="245" text-anchor="middle" fill="#4B5563" font-size="13">T2</text>
+              <text x="500" y="245" text-anchor="middle" fill="#4B5563" font-size="13">T3</text>
+              <text x="720" y="245" text-anchor="middle" fill="#4B5563" font-size="13">T4</text>
+            </svg>
+            <div class="legend">
+              <span><span class="dot blue"></span>Tiếp nhận</span>
+              <span><span class="dot green"></span>Xử lý</span>
+              <span><span class="dot red"></span>Quá hạn</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="portal-grid">
+          <div class="section-card">
+            <div class="section-title">
+              <h3>XẾP HẠNG ĐƠN VỊ</h3>
+              <span>Top 5 đơn vị theo tỷ lệ đúng hạn</span>
+            </div>
+            <div class="ranking-list">
+              <div class="rank-item">
+                <div class="rank-main">
+                  <div class="rank-title">1. Cục A</div>
+                  <div class="rank-meta">Dẫn đầu khối với năng lực xử lý ổn định</div>
+                </div>
+                <span class="badge green">96%</span>
+              </div>
+              <div class="rank-item">
+                <div class="rank-main">
+                  <div class="rank-title">2. Vụ B</div>
+                  <div class="rank-meta">Tỷ lệ đúng hạn tăng đều 2 tháng liên tiếp</div>
+                </div>
+                <span class="badge green">94%</span>
+              </div>
+              <div class="rank-item">
+                <div class="rank-main">
+                  <div class="rank-title">3. TT C</div>
+                  <div class="rank-meta">Khối lượng tăng nhưng vẫn giữ nhịp xử lý tốt</div>
+                </div>
+                <span class="badge blue">92%</span>
+              </div>
+              <div class="rank-item">
+                <div class="rank-main">
+                  <div class="rank-title">4. Cục D</div>
+                  <div class="rank-meta">Đang cải thiện backlog trong tháng</div>
+                </div>
+                <span class="badge blue">90%</span>
+              </div>
+              <div class="rank-item">
+                <div class="rank-main">
+                  <div class="rank-title">5. Vụ E</div>
+                  <div class="rank-meta">Cần thêm nguồn lực để giữ mức ổn định</div>
+                </div>
+                <span class="badge amber">88%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-card">
+            <div class="section-title">
+              <h3>CẢNH BÁO ĐIỀU HÀNH</h3>
+              <span>Các điểm cần chỉ đạo</span>
+            </div>
+            <div class="alert-list">
+              <div class="alert-item">
+                <div class="alert-main">
+                  <div class="alert-title">03 đơn vị có tỷ lệ quá hạn &gt; 10%</div>
+                  <div class="alert-meta">Ưu tiên kiểm tra nguyên nhân tồn đọng và phân luồng xử lý</div>
+                </div>
+                <span class="badge red">Khẩn</span>
+              </div>
+              <div class="alert-item">
+                <div class="alert-main">
+                  <div class="alert-title">02 đơn vị backlog tăng mạnh</div>
+                  <div class="alert-meta">Khối lượng hồ sơ tăng bất thường so với cùng kỳ</div>
+                </div>
+                <span class="badge amber">Theo dõi</span>
+              </div>
+              <div class="alert-item">
+                <div class="alert-main">
+                  <div class="alert-title">01 đơn vị chưa cập nhật tiến độ đúng hạn</div>
+                  <div class="alert-meta">Cần nhắc cập nhật dữ liệu dashboard trước giao ban</div>
+                </div>
+                <span class="badge blue">Nhắc việc</span>
+              </div>
+            </div>
+            <div style="margin-top: 16px;"><button class="cta-btn">Xem chi tiết điều hành</button></div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="section-card">
+            <div class="section-title">
+              <h3>SO SÁNH KHỐI / NHÓM ĐƠN VỊ</h3>
+              <span>Hiệu quả xử lý theo nhóm</span>
+            </div>
+            <div class="bar-compare">
+              <div class="bar-row">
+                <div class="bar-label">Khối Bộ</div>
+                <div class="bar-track"><div class="bar-fill" style="width: 95%;"></div></div>
+                <div class="bar-value">95%</div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">Khối Cục</div>
+                <div class="bar-track"><div class="bar-fill" style="width: 91%;"></div></div>
+                <div class="bar-value">91%</div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">Khối Vụ</div>
+                <div class="bar-track"><div class="bar-fill" style="width: 88%;"></div></div>
+                <div class="bar-value">88%</div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">Khối TT</div>
+                <div class="bar-track"><div class="bar-fill" style="width: 86%;"></div></div>
+                <div class="bar-value">86%</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="insight-box">
+            <p>Tháng này toàn Bộ tiếp nhận 12.430 văn bản, xử lý đúng hạn đạt 91,6%, số quá hạn giảm 15% so với tháng trước.</p>
+            <div class="highlight-list">
+              <div>• Tỷ lệ đúng hạn tăng 2.1% ở toàn hệ thống</div>
+              <div>• Cục A đang đứng đầu bảng xếp hạng tháng</div>
+              <div>• Vụ D là đơn vị cần được lưu ý thêm trong giao ban</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-cong-khai" class="tab-panel" role="tabpanel">
+      <div class="dashboard-section">
+        <div class="section-card">
+          <div class="dashboard-header">
+            <div>
+              <h2>CỔNG THÔNG TIN TỔNG HỢP HỒ SƠ / VĂN BẢN</h2>
+              <p>Giao diện công khai tối giản, tập trung minh bạch số liệu an toàn và hỗ trợ tra cứu nhanh.</p>
+            </div>
+            <div class="filters">
+              <div class="filter-pill">Cập nhật định kỳ</div>
+              <div class="filter-pill">Dữ liệu tổng hợp</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Tổng hồ sơ tiếp nhận</div>
+            <div class="kpi-value">45,320</div>
+          </div>
+          <div class="kpi-card warning">
+            <div class="kpi-label">Đang xử lý</div>
+            <div class="kpi-value">3,241</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Đã hoàn thành</div>
+            <div class="kpi-value">41,102</div>
+          </div>
+          <div class="kpi-card highlight">
+            <div class="kpi-label">Tỷ lệ đúng hạn</div>
+            <div class="kpi-value">92.4%</div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-title">
+            <h3>TRA CỨU NHANH</h3>
+            <span>Tìm theo mã hồ sơ hoặc mã văn bản</span>
+          </div>
+          <div class="search-box">
+            <input class="search-input" type="text" placeholder="Nhập mã hồ sơ / mã văn bản" />
+            <button class="search-btn">Tra cứu</button>
+          </div>
+        </div>
+
+        <div class="mini-split">
+          <div class="section-card">
+            <div class="section-title">
+              <h3>XU HƯỚNG THEO THÁNG</h3>
+              <span>Minh họa biến động tổng số hồ sơ</span>
+            </div>
+            <div class="trend-area">
+              <svg class="line-svg" viewBox="0 0 700 260" preserveAspectRatio="none" aria-label="Xu hướng hồ sơ theo tháng">
+                <line x1="50" y1="210" x2="650" y2="210" stroke="#D5DCE5" stroke-width="1" />
+                <polyline fill="none" stroke="#1565C0" stroke-width="5" points="70,185 170,170 270,150 370,126 470,102 570,96" />
+                <circle cx="70" cy="185" r="6" fill="#1565C0" />
+                <circle cx="170" cy="170" r="6" fill="#1565C0" />
+                <circle cx="270" cy="150" r="6" fill="#1565C0" />
+                <circle cx="370" cy="126" r="6" fill="#1565C0" />
+                <circle cx="470" cy="102" r="6" fill="#1565C0" />
+                <circle cx="570" cy="96" r="6" fill="#1565C0" />
+                <text x="70" y="238" text-anchor="middle" fill="#4B5563" font-size="13">T1</text>
+                <text x="170" y="238" text-anchor="middle" fill="#4B5563" font-size="13">T2</text>
+                <text x="270" y="238" text-anchor="middle" fill="#4B5563" font-size="13">T3</text>
+                <text x="370" y="238" text-anchor="middle" fill="#4B5563" font-size="13">T4</text>
+                <text x="470" y="238" text-anchor="middle" fill="#4B5563" font-size="13">T5</text>
+                <text x="570" y="238" text-anchor="middle" fill="#4B5563" font-size="13">T6</text>
+              </svg>
+            </div>
+          </div>
+
+          <div class="section-card">
+            <div class="section-title">
+              <h3>TỶ LỆ XỬ LÝ</h3>
+              <span>Chỉ số công khai mức tổng hợp</span>
+            </div>
+            <div class="progress-stack">
+              <div class="progress-card">
+                <div class="progress-title">Đúng hạn — 92%</div>
+                <div class="progress-track"><div class="progress-fill green"></div></div>
+                <div class="rank-meta">Phần lớn hồ sơ được hoàn thành trong hạn xử lý.</div>
+              </div>
+              <div class="progress-card">
+                <div class="progress-title">Quá hạn — 8%</div>
+                <div class="progress-track"><div class="progress-fill amber"></div></div>
+                <div class="rank-meta">Số liệu tổng hợp định kỳ, không hiển thị chi tiết nội bộ.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="public-note">
+          Số liệu được tổng hợp định kỳ, không bao gồm thông tin nghiệp vụ nhạy cảm, danh sách hồ sơ nội bộ hoặc chi tiết điều hành theo cá nhân/đơn vị.
+        </div>
+      </div>
+    </section>
+
+    <div class="footer-note">Tệp mockup độc lập HTML5, không dùng thư viện ngoài.</div>
+  </div>
+
+  <script>
+    (function () {
+      const buttons = document.querySelectorAll('.tab-button');
+      const panels = document.querySelectorAll('.tab-panel');
+
+      buttons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const target = button.getAttribute('data-tab');
+
+          buttons.forEach((btn) => {
+            btn.classList.remove('active');
+            btn.setAttribute('aria-selected', 'false');
+          });
+
+          panels.forEach((panel) => panel.classList.remove('active'));
+
+          button.classList.add('active');
+          button.setAttribute('aria-selected', 'true');
+          document.getElementById(target).classList.add('active');
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
